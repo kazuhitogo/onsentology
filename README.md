@@ -82,6 +82,7 @@ export ONSEN_BEDROCK_MODEL_ID='arn:aws:bedrock:ap-northeast-1:<account-id>:appli
 | `onsen ask <相談>` | 温泉爺エージェントに相談（Bedrock を呼ぶ） |
 | `onsen consult [相談...]` | 湯治コンシェルジュとして複数ターン相談（対話モードあり） |
 | `onsen eval` | オントロジーの効果検証（ablation）を実行・集計 |
+| `onsen graph <切り口>` | グラフの一部を図にする（DOT / PNG / SVG） |
 
 `onsen plan` の主なオプション: `--adapted`（温泉に慣れている）、`--minutes`、`--gap`、`--days`（連続療養日数）、`--high-temp-caution`、`--max-baths`。
 
@@ -90,6 +91,13 @@ export ONSEN_BEDROCK_MODEL_ID='arn:aws:bedrock:ap-northeast-1:<account-id>:appli
 `onsen consult` の主なオプション: `--no-repair`（未出典の語を自動で裏取りしない）、`--no-carry-over`（指摘を次ターンに申し送らない）。
 
 `onsen eval` の主なオプション: `--dry-run`（呼び出し計画だけ表示）、`--conditions`／`--questions`（条件・問を絞る）、`--report`（保存済み JSONL を集計、複数指定で合算）。
+
+`onsen graph` の切り口は3つ。`schema`（クラスとプロパティ）、`facility`（1施設のサブグラフ。`--facility 名前`）、`quality`（掲示用泉質10種と適応症・禁忌症）。**推論で増えた辺は赤い点線で描く**ので、書いた事実と導いた事実が図で区別できる。PNG/SVG には graphviz が必要（`--format dot` なら不要）。
+
+```bash
+uv run onsen graph facility --facility 大滝乃湯 --out ohtakinoyu.png
+uv run onsen graph quality --format svg --out quality.svg
+```
 
 ---
 
@@ -113,6 +121,7 @@ src/onsen_ontology/
 ├── verify.py        回答の検算（ツール戻り値との照合）
 ├── consult.py       相談セッション（申し送り・自動裏取り）
 ├── ablation.py      効果検証（4条件×8問の比較と採点）
+├── visualize.py     グラフの一部を DOT で図にする
 └── cli.py           CLI
 
 docs/
@@ -251,7 +260,7 @@ uv run onsen eval --report .cache/ablation-*.jsonl # 保存済みの結果を合
 ## テスト
 
 ```bash
-uv run pytest              # 135 passed, 1 skipped
+uv run pytest              # 141 passed, 1 skipped
 uv run ruff check .
 ```
 

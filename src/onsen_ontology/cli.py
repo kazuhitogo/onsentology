@@ -15,6 +15,7 @@ from . import itinerary, queries
 from .env import load_dotenv
 from .graph import load_graph, load_inferred_graph
 from .reasoning import SPARQL_RULES, apply_reasoning
+from .visualize import VIEWS
 
 
 def _print(obj: Any) -> None:
@@ -247,6 +248,42 @@ def cmd_eval(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_graph(args: argparse.Namespace) -> int:
+    """グラフの一部を図にする（DOT を書き出し、graphviz があれば画像化する）。"""
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    from .visualize import build_view
+
+    try:
+        dot_source = build_view(args.view, name=args.facility)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    out = Path(args.out) if args.out else Path(f"{args.view}.{args.format}")
+    if args.format == "dot":
+        out.write_text(dot_source, encoding="utf-8")
+        print(f"書き出した: {out}", file=sys.stderr)
+        return 0
+
+    if shutil.which("dot") is None:
+        print(
+            "graphviz の dot が見つからない。DOT のまま出すか graphviz を入れること"
+            "（apt install graphviz / brew install graphviz）。",
+            file=sys.stderr,
+        )
+        return 1
+    subprocess.run(  # noqa: S603 - 入力は自分が生成した DOT のみ
+        ["dot", f"-T{args.format}", "-Gdpi=110", "-o", str(out)],
+        input=dot_source.encode("utf-8"),
+        check=True,
+    )
+    print(f"書き出した: {out}", file=sys.stderr)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="onsen",
@@ -336,6 +373,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--dry-run", action="store_true", help="呼び出し計画を表示するだけ")
     p.set_defaults(func=cmd_eval)
+
+    p = sub.add_parser("graph", help="グラフの一部を図にする（DOT / PNG / SVG）")
+    p.add_argument(
+        "view",
+        choices=list(VIEWS),
+        help="切り口。schema=スキーマ / facility=1施設のサブグラフ / quality=泉質と適応症",
+    )
+    p.add_argument("--facility", default="御座之湯", help="facility のときの施設名（部分一致）")
+    p.add_argument("--format", default="png", choices=["dot", "png", "svg"], help="出力形式")
+    p.add_argument("--out", help="出力先。既定は <view>.<format>")
+    p.set_defaults(func=cmd_graph)
 
     return parser
 
