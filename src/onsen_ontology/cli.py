@@ -195,6 +195,8 @@ def cmd_eval(args: argparse.Namespace) -> int:
         records: list[ablation.Record] = []
         for path in args.report:
             records += ablation.read_jsonl(Path(path))
+        # 採点条件を直したときに古い採点が残らないよう、常に現在の条件で採点し直す
+        records = ablation.rescore(records)
         _print(
             {
                 "件数": len(records),

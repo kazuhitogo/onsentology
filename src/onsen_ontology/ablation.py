@@ -251,7 +251,10 @@ QUESTIONS: tuple[Question, ...] = (
             Check(
                 label="分からない／手元にないと言う",
                 kind="expect",
-                pattern=r"(分から|わから|公表|収録|手元|掲示を見|データが(無|な)い)",
+                pattern=(
+                    r"(分から|わから|公表|収録|手元|掲示|見当たら|登録され|入っておらん"
+                    r"|データに(は)?(無|な)い|データが(無|な)い)"
+                ),
                 basis="データが無いことを欠損として持つ設計",
             ),
             Check(
@@ -558,6 +561,25 @@ def read_jsonl(path: Path) -> list[Record]:
         return [Record.from_dict(json.loads(line)) for line in handle if line.strip()]
 
 
+def rescore(records: Iterable[Record]) -> list[Record]:
+    """保存済みの回答文を、現在の採点条件でもう一度採点する。
+
+    採点条件（:data:`QUESTIONS` の :class:`Check`）を直したときに、**過去の結果も同じコードで
+    採点し直す**ためにある。回答文は保存してあるので Bedrock を呼び直す必要はない。
+
+    実験の途中で採点条件をいじるのは、都合のよい方向に結果を動かしうる操作である。だからこそ
+    「全サンプルに同じ条件を当てる」経路を用意して、条件を変えたら必ず全部を再採点する。
+    """
+    by_id = {question.id: question for question in QUESTIONS}
+    updated: list[Record] = []
+    for record in records:
+        question = by_id.get(record.question)
+        if question is not None:
+            record.checks = score_answer(question, record.answer)
+        updated.append(record)
+    return updated
+
+
 def default_output_path() -> Path:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     return Path(".cache") / f"ablation-{stamp}.jsonl"
@@ -576,6 +598,7 @@ __all__ = [
     "default_output_path",
     "per_question_table",
     "read_jsonl",
+    "rescore",
     "run_ablation",
     "run_one",
     "score_answer",

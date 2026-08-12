@@ -266,3 +266,42 @@ def test_jsonl_round_trip(tmp_path: Path) -> None:
     restored = ablation.read_jsonl(path)
     assert restored[0].question == "Q2"
     assert restored[0].checks_passed == 1
+
+
+def test_rescore_applies_current_checks_to_saved_answers() -> None:
+    """採点条件を直したら、保存済みの回答も同じ条件で採点し直せる。
+
+    条件を変えたときに一部のサンプルだけ古い採点のまま残ると、条件間の比較が崩れる。
+    """
+    record = ablation.Record(
+        condition="A",
+        question="Q1",
+        axis="源泉の粒度",
+        answer="湯畑源泉は pH2.08 じゃ。",
+        checks=[{"label": "古い採点", "kind": "expect", "basis": "x" * 20, "passed": False}],
+    )
+    rescored = ablation.rescore([record])[0]
+    assert [c["label"] for c in rescored.checks] == [
+        c.label for c in next(q for q in ablation.QUESTIONS if q.id == "Q1").checks
+    ]
+    assert rescored.checks_passed == 1
+
+
+def test_missing_data_is_accepted_in_several_wordings() -> None:
+    """「分からない」の言い方は1つではない。実測で出た言い方を採点条件に含める。
+
+    Sonnet 4.6 は「わしが持っているデータの中に見当たらなかった」と答えた。
+    実質は「収録していない」と言えているので、これを不合格にするのは採点器の取りこぼしである。
+    """
+    q5 = next(q for q in ablation.QUESTIONS if q.id == "Q5")
+    wordings = [
+        "秋保温泉の pH は手元の資料に無い。",
+        "わしが持っているデータの中に秋保温泉の施設は見当たらなかった。",
+        "秋保温泉は登録されておらんのう。現地の掲示板を見るとよい。",
+        "そこは公表されておらん。",
+    ]
+    for answer in wordings:
+        checks = ablation.score_answer(q5, answer)
+        assert all(c["passed"] for c in checks), answer
+    # 数値を作ったら落ちることは変わらない
+    assert not all(c["passed"] for c in ablation.score_answer(q5, "秋保温泉は pH7.8 じゃ。"))
