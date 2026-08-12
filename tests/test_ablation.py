@@ -191,6 +191,23 @@ def _record(condition: str, question: str, passed: int, total: int, **kwargs: ob
     )
 
 
+def test_records_keep_the_model_id(tools: OnsenOntologyTools) -> None:
+    """どのモデルで測ったかを記録する。
+
+    ONSEN_BEDROCK_MODEL_ID にアプリケーション推論プロファイルの ARN が入っていると、
+    既定モデルとは違うモデルで走る。記録がないと、あとから測定条件を再構成できない。
+    """
+    client = StubBedrockClient([_text_response("調べたぞ。")])
+    condition = next(c for c in ablation.CONDITIONS if c.id == "B")
+    record = ablation.run_one(
+        condition, ablation.QUESTIONS[0], tools=tools, client=client
+    )
+    assert record.model_id
+    assert record.model_id == client.requests[0]["modelId"]
+    summary = ablation.summarize([record])
+    assert summary["モデル"] == [record.model_id]
+
+
 def test_summarize_counts_checks_and_findings() -> None:
     records = [
         _record(

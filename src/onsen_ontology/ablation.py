@@ -366,6 +366,7 @@ class Record:
     question: str
     axis: str
     answer: str
+    model_id: str = ""
     tool_calls: list[str] = field(default_factory=list)
     findings: list[dict[str, str]] = field(default_factory=list)
     checks: list[dict[str, Any]] = field(default_factory=list)
@@ -383,6 +384,7 @@ class Record:
             "question": self.question,
             "axis": self.axis,
             "answer": self.answer,
+            "model_id": self.model_id,
             "tool_calls": self.tool_calls,
             "findings": self.findings,
             "checks": self.checks,
@@ -431,6 +433,10 @@ def run_one(
         question=question.id,
         axis=question.axis,
         answer=result.text,
+        # どのモデルで測ったかを必ず残す。ONSEN_BEDROCK_MODEL_ID に
+        # アプリケーション推論プロファイルの ARN が入っていると、既定モデルとは違うものが
+        # 使われる。記録しておかないと、あとから条件を再構成できない。
+        model_id=agent.model_id,
         tool_calls=[call.name for call in result.tool_calls],
         findings=[{"kind": f.kind, "severity": f.severity, "text": f.text} for f in result.findings],
         checks=score_answer(question, result.text),
@@ -476,11 +482,17 @@ FINDING_KINDS: tuple[str, ...] = (
 def summarize(records: Iterable[Record]) -> dict[str, Any]:
     """条件ごとに集計する。"""
     by_condition: dict[str, list[Record]] = {}
+    models: set[str] = set()
     for record in records:
         by_condition.setdefault(record.condition, []).append(record)
+        if record.model_id:
+            models.add(record.model_id)
 
     labels = {condition.id: condition.label for condition in CONDITIONS}
     summary: dict[str, Any] = {}
+    if models:
+        # 条件間で同じモデルを使っていることは、比較の前提として明示する
+        summary["モデル"] = sorted(models)
     for cid, group in by_condition.items():
         checks_total = sum(len(record.checks) for record in group)
         checks_passed = sum(record.checks_passed for record in group)
