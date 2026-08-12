@@ -1,0 +1,41 @@
+[project]
+name = "onsen-ontology"
+version = "0.1.0"
+description = "温泉の法制度・分類体系のオントロジーと、SPARQL推論 + Bedrock tool calling による温泉爺エージェント"
+readme = "README.md"
+authors = [
+    { name = "Kazuhito Go", email = "kazuhitogo@gmail.com" }
+]
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = [
+    "boto3>=1.43.64",
+    "owlrl>=7.6.2",
+    "rdflib>=7.6.0",
+]
+
+[project.scripts]
+onsen = "onsen_ontology.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.1",
+]
+
+[tool.ruff]
+# 日本語の文字列リテラルが多いため、ASCII 前提の 88/100 より緩めている。
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

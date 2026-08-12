@@ -1,0 +1,91 @@
+@prefix onsen: <https://example.org/onsen#> .
+@prefix oid:   <https://example.org/onsen/id/> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+
+#################################################################
+#
+#  温泉オントロジー: 独自ヒューリスティック
+#
+#  **法令に根拠のない対応表だけ**を集めたファイル。出典が無いという点で
+#  onsen_knowledge.ttl（環境省の通知）と onsen_instances.ttl（各施設の公表値）とは
+#  性質が違うので分けている。ここに書いてあるものは掲示基準の引用ではなく、
+#  本オントロジーの判断である。
+#
+#  - 症状の口語表現（onsen:colloquialExpression）      … 症状検索の入力側
+#  - 条文表記でない言い換え（onsen:nonStandardParaphrase）… 回答の検算で警告する
+#  - 相談の意図（onsen:ConsultIntent）                 … 呼ぶべきツールの対応づけ
+#
+#  各プロパティ・クラスの定義（スキーマ）は onsen_ontology.ttl にあり、
+#  いずれにも onsen:heuristicRule 注記が付いている。
+#
+#################################################################
+
+# --- 症状の口語表現（独自ヒューリスティック。onsen:colloquialExpression の注記を参照） ---
+onsen:AtopicDermatitis onsen:colloquialExpression "アトピー" .
+onsen:AtrophicGastritis onsen:colloquialExpression "胃" .
+onsen:AutonomicInstability onsen:colloquialExpression "ストレス" , "自律神経" .
+onsen:ChronicEczema onsen:colloquialExpression "湿疹" , "荒れ" .
+onsen:ChronicPainOrStiffness onsen:colloquialExpression "こわば" , "肩が" , "肩こり" , "腰" , "関節" .
+onsen:Coldness onsen:colloquialExpression "ひえ" , "冷え" , "冷たい" .
+onsen:Constipation onsen:colloquialExpression "便秘" .
+onsen:Convalescence onsen:colloquialExpression "疲れ" .
+onsen:Cut onsen:colloquialExpression "きりきず" , "傷" , "切り傷" .
+onsen:DepressiveState onsen:colloquialExpression "うつ" , "気分が沈" , "落ち込" .
+onsen:DrySkin onsen:colloquialExpression "かさつ" , "ガサガサ" , "乾燥" , "皮膚" , "肌" , "荒れ" .
+onsen:EpidermalPyoderma onsen:colloquialExpression "にきび" .
+onsen:FatigueRecovery onsen:colloquialExpression "だる" , "だるい" , "疲れ" , "疲労" .
+onsen:HemorrhoidPain onsen:colloquialExpression "痔" .
+onsen:Hypercholesterolemia onsen:colloquialExpression "コレステロール" .
+onsen:Hyperuricemia onsen:colloquialExpression "尿酸" , "痛風" .
+onsen:ImpairedGlucoseTolerance onsen:colloquialExpression "糖尿" , "血糖" .
+onsen:Insomnia onsen:colloquialExpression "不眠" , "眠れ" , "睡眠" .
+onsen:IronDeficiencyAnemia onsen:colloquialExpression "貧血" .
+onsen:MildAsthmaOrEmphysema onsen:colloquialExpression "喘息" .
+onsen:MildHypercholesterolemia onsen:colloquialExpression "コレステロール" .
+onsen:MildHypertension onsen:colloquialExpression "血圧" .
+onsen:PeripheralCirculationDisorder onsen:colloquialExpression "ひえ" , "冷え" , "冷たい" .
+onsen:PsoriasisVulgaris onsen:colloquialExpression "乾癬" .
+onsen:ReducedGastrointestinalFunction onsen:colloquialExpression "胃" , "腸" .
+onsen:RheumatoidArthritis onsen:colloquialExpression "リウマチ" , "関節" .
+onsen:StressRelatedSymptoms onsen:colloquialExpression "ストレス" , "眠れ" , "睡眠" .
+
+# --- 条文表記でない言い換え（検算で「条文の表記に直せ」と指摘するための表） ---
+onsen:ActiveDiseasePhase onsen:nonStandardParaphrase "急性疾患" , "高熱" , "発熱中の病気" .
+onsen:PeripheralCirculationDisorder onsen:nonStandardParaphrase "血行不良" .
+onsen:Convalescence onsen:nonStandardParaphrase "病み上がり" .
+onsen:ChronicPainOrStiffness onsen:nonStandardParaphrase "関節痛" , "筋肉痛" .
+onsen:SevereHeartOrLungDisease onsen:nonStandardParaphrase "重い心臓病" , "心疾患" .
+onsen:SevereDebilitation onsen:nonStandardParaphrase "身体が衰弱している人" .
+onsen:AcuteExacerbation onsen:nonStandardParaphrase "急性増悪" .
+onsen:DrySkin onsen:nonStandardParaphrase "乾燥肌" , "肌の乾燥" .
+
+# --- 相談の意図 → 呼ぶべきツール ------------------------------------
+# 「言わなかったこと」の検査に使う。巡浴を頼まれて plan_itinerary を呼ばず
+# 一般論だけ述べる回答は、値の照合には引っかからないまま規則5に反する。
+
+oid:intent-itinerary a onsen:ConsultIntent ;
+    rdfs:label "巡浴の相談"@ja ;
+    onsen:intentKeyword "巡浴" , "はしご" , "ハシゴ" , "順番" , "回る" , "回りたい" , "プラン" , "組んで" , "何軒" ;
+    onsen:expectedTool "plan_itinerary" , "validate_itinerary" ;
+    onsen:repairTool "plan_itinerary" ;
+    onsen:findingSeverity "error" ;
+    rdfs:comment "巡浴の相談は必ずツールで検証する（規則5）"@ja .
+
+oid:intent-drinking a onsen:ConsultIntent ;
+    rdfs:label "飲用の相談"@ja ;
+    onsen:intentKeyword "飲泉" , "飲用" , "飲んで" , "飲める" , "飲みたい" ;
+    onsen:expectedTool "get_drinking_protocol" , "evaluate_drinking_contraindications" ;
+    onsen:repairTool "get_drinking_protocol" ;
+    onsen:findingSeverity "warning" ;
+    rdfs:comment "飲用の方法及び注意を引いていない"@ja .
+
+oid:intent-bathing-method a onsen:ConsultIntent ;
+    rdfs:label "入浴方法の相談"@ja ;
+    onsen:intentKeyword "何分" , "何回" , "入浴時間" , "湯あたり" , "何日" ;
+    onsen:expectedTool "get_bathing_protocol" , "plan_itinerary" , "validate_itinerary" ;
+    onsen:repairTool "get_bathing_protocol" ;
+    onsen:findingSeverity "warning" ;
+    rdfs:comment "浴用の方法及び注意を引いていない"@ja .

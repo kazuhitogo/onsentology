@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# ローカル設定（アカウント固有の ARN やプロファイル名を含む）
+.env
+
+# 推論結果キャッシュ
+.cache/
+
+# pytest
+.pytest_cache/
+.ruff_cache/
+
+# 記事本文（note.com に投稿する原稿）と作業用ドキュメント。リポジトリには含めない。
+articles/
+HANDOVER.md
+HISTORY.md
+PLAN.md

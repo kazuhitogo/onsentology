@@ -1,0 +1,412 @@
+@prefix onsen: <https://example.org/onsen#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+
+#################################################################
+#
+#  温泉オントロジー: 法定知識ベース（規範）
+#
+#  掲示用泉質10種、適応症・禁忌症、利用プロトコルの定義。
+#  すべて以下の一次情報の条文内容に基づく。
+#    - 鉱泉分析法指針（平成26年改訂）
+#      https://www.env.go.jp/nature/onsen/pdf/2-5_p_14.pdf
+#    - 掲示基準（環自総発第1407012号、平成26年7月1日）
+#      https://www.env.go.jp/nature/onsen/pdf/2-5_p_11.pdf
+#    - 温泉利用基準（飲用利用基準）
+#      https://www.env.go.jp/nature/onsen/pdf/2-5_p_10.pdf
+#
+#  【免責】医療的助言ではない。個人の健康判断の根拠として用いないこと。
+#
+#################################################################
+
+#################################################################
+#    1. 症状・病態（適応症・禁忌症の対象）
+#################################################################
+
+# --- 一般的適応症（浴用）に現れるもの -------------------------------
+onsen:ChronicPainOrStiffness a onsen:HealthCondition ;
+    rdfs:label "筋肉若しくは関節の慢性的な痛み又はこわばり"@ja ;
+    rdfs:comment "関節リウマチ、変形性関節症、腰痛症、神経痛、五十肩、打撲、捻挫などの慢性期。"@ja .
+onsen:MuscleStiffnessInParalysis a onsen:HealthCondition ;
+    rdfs:label "運動麻痺における筋肉のこわばり"@ja .
+onsen:Coldness a onsen:HealthCondition ;
+    rdfs:label "冷え性"@ja .
+onsen:PeripheralCirculationDisorder a onsen:HealthCondition ;
+    rdfs:label "末梢循環障害"@ja .
+onsen:ReducedGastrointestinalFunction a onsen:HealthCondition ;
+    rdfs:label "胃腸機能の低下"@ja ;
+    rdfs:comment "胃がもたれる、腸にガスがたまるなど。"@ja .
+onsen:MildHypertension a onsen:HealthCondition ;
+    rdfs:label "軽症高血圧"@ja .
+onsen:ImpairedGlucoseTolerance a onsen:HealthCondition ;
+    rdfs:label "耐糖能異常（糖尿病）"@ja .
+onsen:MildHypercholesterolemia a onsen:HealthCondition ;
+    rdfs:label "軽い高コレステロール血症"@ja .
+onsen:MildAsthmaOrEmphysema a onsen:HealthCondition ;
+    rdfs:label "軽い喘息又は肺気腫"@ja .
+onsen:HemorrhoidPain a onsen:HealthCondition ;
+    rdfs:label "痔の痛み"@ja .
+onsen:AutonomicInstability a onsen:HealthCondition ;
+    rdfs:label "自律神経不安定症"@ja .
+onsen:StressRelatedSymptoms a onsen:HealthCondition ;
+    rdfs:label "ストレスによる諸症状"@ja ;
+    rdfs:comment "睡眠障害、うつ状態など。一般的適応症では自律神経不安定症と併記されている。"@ja .
+onsen:Convalescence a onsen:HealthCondition ;
+    rdfs:label "病後回復期"@ja .
+onsen:FatigueRecovery a onsen:HealthCondition ;
+    rdfs:label "疲労回復"@ja .
+onsen:HealthPromotion a onsen:HealthCondition ;
+    rdfs:label "健康増進"@ja .
+
+# --- 泉質別適応症に現れるもの ---------------------------------------
+onsen:Insomnia a onsen:HealthCondition ; rdfs:label "不眠症"@ja .
+onsen:DepressiveState a onsen:HealthCondition ; rdfs:label "うつ状態"@ja .
+onsen:Cut a onsen:HealthCondition ; rdfs:label "きりきず"@ja .
+onsen:DrySkin a onsen:HealthCondition ; rdfs:label "皮膚乾燥症"@ja .
+onsen:AtopicDermatitis a onsen:HealthCondition ; rdfs:label "アトピー性皮膚炎"@ja .
+onsen:PsoriasisVulgaris a onsen:HealthCondition ; rdfs:label "尋常性乾癬"@ja .
+onsen:ChronicEczema a onsen:HealthCondition ; rdfs:label "慢性湿疹"@ja .
+onsen:EpidermalPyoderma a onsen:HealthCondition ; rdfs:label "表皮化膿症"@ja .
+onsen:Hyperuricemia a onsen:HealthCondition ; rdfs:label "高尿酸血症（痛風）"@ja .
+onsen:RheumatoidArthritis a onsen:HealthCondition ; rdfs:label "関節リウマチ"@ja .
+onsen:AnkylosingSpondylitis a onsen:HealthCondition ; rdfs:label "強直性脊椎炎"@ja .
+onsen:AtrophicGastritis a onsen:HealthCondition ; rdfs:label "萎縮性胃炎"@ja .
+onsen:Constipation a onsen:HealthCondition ; rdfs:label "便秘"@ja .
+onsen:GastroduodenalUlcer a onsen:HealthCondition ; rdfs:label "胃十二指腸潰瘍"@ja .
+onsen:RefluxEsophagitis a onsen:HealthCondition ; rdfs:label "逆流性食道炎"@ja .
+onsen:BiliaryDysfunction a onsen:HealthCondition ; rdfs:label "胆道系機能障害"@ja .
+onsen:Hypercholesterolemia a onsen:HealthCondition ; rdfs:label "高コレステロール血症"@ja .
+onsen:IronDeficiencyAnemia a onsen:HealthCondition ; rdfs:label "鉄欠乏性貧血"@ja .
+
+# --- 一般的禁忌症（浴用）に現れるもの -------------------------------
+onsen:ActiveDiseasePhase a onsen:HealthCondition ;
+    rdfs:label "病気の活動期（特に熱のあるとき）"@ja .
+onsen:ActiveTuberculosis a onsen:HealthCondition ;
+    rdfs:label "活動性の結核"@ja .
+onsen:AdvancedMalignantTumor a onsen:HealthCondition ;
+    rdfs:label "進行した悪性腫瘍"@ja .
+onsen:SevereDebilitation a onsen:HealthCondition ;
+    rdfs:label "高度の貧血など身体衰弱の著しい場合"@ja .
+onsen:SevereHeartOrLungDisease a onsen:HealthCondition ;
+    rdfs:label "少し動くと息苦しくなるような重い心臓又は肺の病気"@ja .
+onsen:SevereKidneyDiseaseWithEdema a onsen:HealthCondition ;
+    rdfs:label "むくみのあるような重い腎臓の病気"@ja .
+onsen:VisibleBleeding a onsen:HealthCondition ;
+    rdfs:label "消化管出血、目に見える出血があるとき"@ja .
+onsen:AcuteExacerbation a onsen:HealthCondition ;
+    rdfs:label "慢性の病気の急性増悪期"@ja .
+
+# --- 泉質別禁忌症（浴用）に現れるもの -------------------------------
+onsen:HypersensitiveSkinOrMucosa a onsen:HealthCondition ;
+    rdfs:label "皮膚又は粘膜の過敏な人"@ja .
+onsen:DrySkinInElderly a onsen:HealthCondition ;
+    rdfs:label "高齢者の皮膚乾燥症"@ja .
+
+# --- 含有成分別禁忌症（飲用）に現れるもの ---------------------------
+onsen:SaltRestrictionRequired a onsen:HealthCondition ;
+    rdfs:label "塩分制限の必要な病態"@ja ;
+    rdfs:comment "腎不全、心不全、肝硬変、虚血性心疾患、高血圧など。"@ja .
+onsen:PotassiumRestrictionRequired a onsen:HealthCondition ;
+    rdfs:label "カリウム制限の必要な病態"@ja ;
+    rdfs:comment "腎不全、副腎皮質機能低下症。"@ja .
+onsen:Diarrhea a onsen:HealthCondition ; rdfs:label "下痢"@ja .
+onsen:RenalFailure a onsen:HealthCondition ; rdfs:label "腎不全"@ja .
+onsen:Hyperthyroidism a onsen:HealthCondition ; rdfs:label "甲状腺機能亢進症"@ja .
+
+
+#################################################################
+#    2. 療養泉の一般的適応症・一般的禁忌症
+#################################################################
+
+onsen:TherapeuticSpringGeneralProfile a onsen:IndicationProfile ;
+    rdfs:label "療養泉の一般的適応症・温泉の一般的禁忌症"@ja ;
+    rdfs:comment """泉質を問わず療養泉であれば共通して掲示できる適応症（浴用のみ規定）と、
+温泉の一般的禁忌症（浴用）。泉質別のものと重複する場合、掲示に当たっては
+泉質別適応症の掲示を優先し、重複するものを一般的適応症から除いても差し支えない。"""@ja ;
+    onsen:legalBasis "掲示基準 2.(1)①、3.(1)" ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/pdf/2-5_p_11.pdf> ;
+
+    onsen:hasBathingIndication
+        onsen:ChronicPainOrStiffness ,
+        onsen:MuscleStiffnessInParalysis ,
+        onsen:Coldness ,
+        onsen:PeripheralCirculationDisorder ,
+        onsen:ReducedGastrointestinalFunction ,
+        onsen:MildHypertension ,
+        onsen:ImpairedGlucoseTolerance ,
+        onsen:MildHypercholesterolemia ,
+        onsen:MildAsthmaOrEmphysema ,
+        onsen:HemorrhoidPain ,
+        onsen:AutonomicInstability ,
+        onsen:StressRelatedSymptoms ,
+        onsen:Convalescence ,
+        onsen:FatigueRecovery ,
+        onsen:HealthPromotion ;
+
+    onsen:hasBathingContraindication
+        onsen:ActiveDiseasePhase ,
+        onsen:ActiveTuberculosis ,
+        onsen:AdvancedMalignantTumor ,
+        onsen:SevereDebilitation ,
+        onsen:SevereHeartOrLungDisease ,
+        onsen:SevereKidneyDiseaseWithEdema ,
+        onsen:VisibleBleeding ,
+        onsen:AcuteExacerbation .
+
+#################################################################
+#    3. 掲示用泉質10種
+#################################################################
+
+onsen:SimpleSpring a onsen:SpringQuality ;
+    rdfs:label "単純温泉"@ja ;
+    onsen:criterionProperty onsen:dissolvedSolids ;
+    onsen:criterionMaxValue 1000.0 ;
+    onsen:criterionMinTemperature 25.0 ;
+    rdfs:comment """溶存物質（ガス性のものを除く）が1,000mg/kg未満、かつ泉温25℃以上。
+現地（湧出地）pH測定値が8.5以上のものは「アルカリ性単純温泉」と称する。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-3(2)" ;
+    onsen:hasBathingIndication
+        onsen:AutonomicInstability , onsen:Insomnia , onsen:DepressiveState .
+
+onsen:ChlorideSpring a onsen:SaltSpringQuality ;
+    rdfs:label "塩化物泉"@ja ;
+    skos:altLabel "食塩泉"@ja ;
+    onsen:criterionProperty onsen:dissolvedSolids ;
+    onsen:criterionMinValue 1000.0 ;
+    onsen:criterionMainAnion "Cl-" ;
+    rdfs:comment """溶存物質（ガス性のものを除く）1,000mg/kg以上で、陰イオンの主成分が塩化物イオン。
+陽イオン主成分によりナトリウム－／カルシウム－／マグネシウム－塩化物泉に細別される。
+ナトリウムイオン5,500mg/kg以上かつ塩化物イオン8,500mg/kg以上のものは
+「ナトリウム－塩化物強塩泉」と称する。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-3(1)1)" ;
+    onsen:hasBathingIndication
+        onsen:Cut , onsen:PeripheralCirculationDisorder , onsen:Coldness ,
+        onsen:DepressiveState , onsen:DrySkin ;
+    onsen:hasDrinkingIndication
+        onsen:AtrophicGastritis , onsen:Constipation .
+
+onsen:BicarbonateSpring a onsen:SaltSpringQuality ;
+    rdfs:label "炭酸水素塩泉"@ja ;
+    skos:altLabel "重曹泉"@ja ;
+    skos:altLabel "重炭酸土類泉"@ja ;
+    onsen:criterionProperty onsen:dissolvedSolids ;
+    onsen:criterionMinValue 1000.0 ;
+    onsen:criterionMainAnion "HCO3-" ;
+    rdfs:comment """溶存物質1,000mg/kg以上で、陰イオンの主成分が炭酸水素イオン。
+炭酸イオン（CO3^2-）が主成分の場合も「炭酸塩泉」とせず炭酸水素塩泉とする。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-3(1)2)" ;
+    onsen:hasBathingIndication
+        onsen:Cut , onsen:PeripheralCirculationDisorder , onsen:Coldness , onsen:DrySkin ;
+    onsen:hasDrinkingIndication
+        onsen:GastroduodenalUlcer , onsen:RefluxEsophagitis ,
+        onsen:ImpairedGlucoseTolerance , onsen:Hyperuricemia .
+
+onsen:SulfateSpring a onsen:SaltSpringQuality ;
+    rdfs:label "硫酸塩泉"@ja ;
+    skos:altLabel "芒硝泉"@ja ;
+    skos:altLabel "石膏泉"@ja ;
+    skos:altLabel "正苦味泉"@ja ;
+    onsen:criterionProperty onsen:dissolvedSolids ;
+    onsen:criterionMinValue 1000.0 ;
+    onsen:criterionMainAnion "SO4--" ;
+    rdfs:comment """溶存物質1,000mg/kg以上で、陰イオンの主成分が硫酸イオン。
+酸性の硫酸塩泉は SO4^2- と HSO4- の mval% を合計して主成分を判定する。
+浴用適応症は掲示基準原文で「塩化物泉に同じ」と規定されている。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-3(1)3)" ;
+    onsen:hasBathingIndication
+        onsen:Cut , onsen:PeripheralCirculationDisorder , onsen:Coldness ,
+        onsen:DepressiveState , onsen:DrySkin ;
+    onsen:hasDrinkingIndication
+        onsen:BiliaryDysfunction , onsen:Hypercholesterolemia , onsen:Constipation .
+
+onsen:CarbonDioxideSpring a onsen:SpecialComponentSpringQuality ;
+    rdfs:label "二酸化炭素泉"@ja ;
+    skos:altLabel "単純炭酸泉"@ja ;
+    onsen:criterionProperty onsen:freeCarbonDioxide ;
+    onsen:criterionMinValue 1000.0 ;
+    rdfs:comment """遊離二酸化炭素1,000mg/kg以上。温泉法上の「温泉」判定では遊離炭酸250mg/kg以上で足りるが、
+療養泉および泉質名の判定には1,000mg/kg以上が必要。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 第1-3表(a)" ;
+    onsen:hasBathingIndication
+        onsen:Cut , onsen:PeripheralCirculationDisorder , onsen:Coldness ,
+        onsen:AutonomicInstability ;
+    onsen:hasDrinkingIndication
+        onsen:ReducedGastrointestinalFunction .
+
+onsen:IronSpring a onsen:SpecialComponentSpringQuality ;
+    rdfs:label "含鉄泉"@ja ;
+    skos:altLabel "緑礬泉"@ja ;
+    skos:altLabel "炭酸鉄泉"@ja ;
+    onsen:criterionProperty onsen:totalIron ;
+    onsen:criterionMinValue 20.0 ;
+    rdfs:comment "総鉄イオン（Fe2+ + Fe3+）20mg/kg以上。浴用の泉質別適応症は定められていない。"@ja ;
+    onsen:legalBasis "鉱泉分析法指針 第1-3表(b)" ;
+    onsen:hasDrinkingIndication onsen:IronDeficiencyAnemia .
+
+onsen:AcidicSpring a onsen:SpecialComponentSpringQuality ;
+    rdfs:label "酸性泉"@ja ;
+    onsen:criterionProperty onsen:hydrogenIon ;
+    onsen:criterionMinValue 1.0 ;
+    rdfs:comment """水素イオン1mg/kg以上。塩類泉がこの基準を満たす場合、泉質名の先頭に「酸性－」を付記する。
+掲示基準 2.(2)①エ(ア) が「刺激の強い泉質」の例として硫黄泉とともに挙げている泉質のひとつ。
+飲用の泉質別適応症は定められていない。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 第1-3表(c)" ;
+    onsen:hasBathingIndication
+        onsen:AtopicDermatitis , onsen:PsoriasisVulgaris ,
+        onsen:ImpairedGlucoseTolerance , onsen:EpidermalPyoderma ;
+    onsen:hasBathingContraindication
+        onsen:HypersensitiveSkinOrMucosa , onsen:DrySkinInElderly .
+
+onsen:IodineSpring a onsen:SpecialComponentSpringQuality ;
+    rdfs:label "含よう素泉"@ja ;
+    onsen:criterionProperty onsen:iodideIon ;
+    onsen:criterionMinValue 10.0 ;
+    rdfs:comment """よう化物イオン10mg/kg以上。平成26年改訂で療養泉の特殊成分に追加された
+（同改訂で銅・アルミニウムは削除された）。浴用の泉質別適応症は定められていない。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 第1-3表(d)" ;
+    onsen:hasDrinkingIndication onsen:Hypercholesterolemia .
+
+onsen:SulfurSpring a onsen:SpecialComponentSpringQuality ;
+    rdfs:label "硫黄泉"@ja ;
+    skos:altLabel "硫化水素泉"@ja ;
+    onsen:criterionProperty onsen:totalSulfur ;
+    onsen:criterionMinValue 2.0 ;
+    rdfs:comment """総硫黄（HS- + S2O3^2- + H2S に対応するもの）2mg/kg以上。
+硫黄が遊離硫化水素の型で主として含有される場合「硫化水素型」と付記し、
+その場合の浴用適応症には末梢循環障害が加わる。
+掲示基準 2.(2)①エ(ア) が「刺激の強い泉質」の例として酸性泉とともに挙げている泉質。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 第1-3表(e)" ;
+    onsen:hasBathingIndication
+        onsen:AtopicDermatitis , onsen:PsoriasisVulgaris ,
+        onsen:ChronicEczema , onsen:EpidermalPyoderma ;
+    onsen:hasDrinkingIndication
+        onsen:ImpairedGlucoseTolerance , onsen:Hypercholesterolemia ;
+    onsen:hasBathingContraindication
+        onsen:HypersensitiveSkinOrMucosa , onsen:DrySkinInElderly .
+
+onsen:RadioactiveSpring a onsen:SpecialComponentSpringQuality ;
+    rdfs:label "放射能泉"@ja ;
+    onsen:criterionProperty onsen:radon ;
+    onsen:criterionMinValue 8.25 ;
+    rdfs:comment """ラドン30×10^-10 Ci = 111Bq以上（8.25マッヘ単位以上）。
+8.25マッヘ以上50マッヘ未満は「弱放射能」、50マッヘ以上は「放射能」と細分する。
+旧泉質名「ラヂウム泉」の表記は不適当とされる。飲用の泉質別適応症は定められていない。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 第1-3表(f)" ;
+    onsen:hasBathingIndication
+        onsen:Hyperuricemia , onsen:RheumatoidArthritis , onsen:AnkylosingSpondylitis .
+
+#################################################################
+#    4. 含有成分別禁忌症（飲用）の算術ルール
+#################################################################
+
+onsen:SodiumDrinkingRule a onsen:ComponentContraindicationRule ;
+    rdfs:label "ナトリウムイオンによる飲用禁忌"@ja ;
+    onsen:componentProperty onsen:sodiumIon ;
+    onsen:thresholdMilligram 1200.0 ;
+    onsen:hasDrinkingContraindication onsen:SaltRestrictionRequired ;
+    onsen:legalBasis "掲示基準 2.(1)③" .
+
+onsen:PotassiumDrinkingRule a onsen:ComponentContraindicationRule ;
+    rdfs:label "カリウムイオンによる飲用禁忌"@ja ;
+    onsen:componentProperty onsen:potassiumIon ;
+    onsen:thresholdMilligram 900.0 ;
+    onsen:hasDrinkingContraindication onsen:PotassiumRestrictionRequired ;
+    onsen:legalBasis "掲示基準 2.(1)③" .
+
+onsen:MagnesiumDrinkingRule a onsen:ComponentContraindicationRule ;
+    rdfs:label "マグネシウムイオンによる飲用禁忌"@ja ;
+    onsen:componentProperty onsen:magnesiumIon ;
+    onsen:thresholdMilligram 300.0 ;
+    onsen:hasDrinkingContraindication onsen:Diarrhea , onsen:RenalFailure ;
+    onsen:legalBasis "掲示基準 2.(1)③" .
+
+onsen:IodideDrinkingRule a onsen:ComponentContraindicationRule ;
+    rdfs:label "よう化物イオンによる飲用禁忌"@ja ;
+    onsen:componentProperty onsen:iodideIon ;
+    onsen:thresholdMilligram 0.1 ;
+    onsen:hasDrinkingContraindication onsen:Hyperthyroidism ;
+    onsen:legalBasis "掲示基準 2.(1)③" .
+
+# --- 掲示基準の条文に載っている計算例 --------------------------------
+# 実在の温泉ではない。条文が示す計算例をそのまま個体化したもので、
+# 含有成分別禁忌症の算術ルールの検算に使う。
+# 原文の計算結果:
+#   1日100mL超（よう化物イオンから算出）→ 甲状腺機能亢進症
+#   1日400mL超（ナトリウムイオンから算出）→ 塩分制限の必要な病態
+#   カリウム・マグネシウムは算出値が500mL以上となるため掲示不要
+
+<https://example.org/onsen/id/src-notice-example> a onsen:SpringSource ;
+    rdfs:label "掲示基準 2.(1)③ の計算例（架空の温泉）"@ja ;
+    onsen:sodiumIon 3000.0 ;
+    onsen:potassiumIon 200.0 ;
+    onsen:magnesiumIon 60.0 ;
+    onsen:iodideIon 1.0 ;
+    onsen:dataStatus "実在の温泉ではない。掲示基準の条文中の計算例を検算用に個体化したもの。" ;
+    onsen:legalBasis "掲示基準 2.(1)③" ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/pdf/2-5_p_11.pdf> .
+
+
+#################################################################
+#    5. 利用プロトコル
+#################################################################
+
+onsen:StandardBathingProtocol a onsen:BathingProtocol ;
+    rdfs:label "浴用の方法及び注意（標準）"@ja ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/pdf/2-5_p_11.pdf> ;
+    onsen:legalBasis "掲示基準 2.(2)①" ;
+    onsen:maxBathsPerDayInitial 2 ;
+    onsen:maxBathsPerDayAdapted 3 ;
+    onsen:maxMinutesPerBathInitial 10 ;
+    onsen:maxMinutesPerBathAdapted 20 ;
+    onsen:restMinutesAfterBath 30 ;
+    onsen:highTemperatureCautionThreshold 42.0 ;
+    onsen:onsetDaysMin 3 ;
+    onsen:onsetDaysMax 7 ;
+    rdfs:comment """条文の要点:
+・入浴回数: 入浴開始後数日間は1日1〜2回、慣れてきたら2〜3回まで増やしてもよい
+・入浴時間: 1回当たり初めは3〜10分程度、慣れてきたら15〜20分程度まで
+・入浴温度: 高齢者、高血圧症若しくは心臓病の人、脳卒中を経験した人は42℃以上の高温浴は避ける
+・入浴形態: 心肺機能の低下している人は全身浴よりも半身浴又は部分浴が望ましい
+・入浴後: 保温及び30分程度の安静、コップ一杯程度の水分補給
+・入浴後: 肌の弱い人は刺激の強い泉質（酸性泉や硫黄泉等）や塩素消毒等の場合は温水で洗い流した方がよい
+・湯あたり: 開始後おおむね3日〜1週間前後に気分不快・不眠・消化器症状等又は皮膚炎が現れることがある。
+  その間は入浴を中止するか回数を減らし、回復を待つ
+・入浴前: 食事の直前直後および飲酒後の入浴を避ける。運動後30分程度は身体を休める"""@ja .
+
+onsen:StandardDrinkingProtocol a onsen:DrinkingProtocol ;
+    rdfs:label "飲用の方法及び注意（標準）"@ja ;
+    dcterms:source
+        <https://www.env.go.jp/nature/onsen/pdf/2-5_p_11.pdf> ,
+        <https://www.env.go.jp/nature/onsen/pdf/2-5_p_10.pdf> ;
+    onsen:legalBasis "掲示基準 2.(2)②、温泉利用基準 第二" ;
+    onsen:drinkingMlPerServingMax 150 ;
+    onsen:drinkingMlPerDayMax 500 ;
+    onsen:minAgeForDrinking 16 ;
+    rdfs:comment """条文の要点:
+・1回の量は一般に100〜150mL程度、1日の総量はおよそ200〜500mLまで
+・15歳以下は原則的に飲用を避ける（医師の指導を受ける場合を除く）
+・飲泉療養に際しては専門的知識を有する医師の指導を受ける。服薬治療中は主治医の意見を聴く
+・pH3未満の温泉は真水でpH3以上となるよう薄め、1回の量は100mLまで
+・ひ素・銅・ふっ素・鉛・水銀・遊離炭酸を含む場合は別に定める方法で飲用量を示す
+  （大人の総摂取量: ひ素0.1mg／銅2mg／ふっ素1.6mg／鉛0.2mg／水銀0.002mg、遊離炭酸は1回1,000mg）
+・食事の30分程度前が望ましい。飲泉場から持ち帰らない。誤嚥に注意（嚥下障害がある人は行わない）
+・微生物基準: 一般細菌100以下／大腸菌群不検出／全有機炭素(TOC) 5mg/L以下"""@ja .
+
+#################################################################
+#    6. 泉質間の順序関係（独自ヒューリスティック）
+#################################################################
+#
+#  ここから下は法定知識ではない。本プロジェクトの経験的ルールである。
+#  onsen:heuristicRule アノテーションで支持根拠を明示している。
+#
+
+onsen:ChlorideSpring onsen:recommendedAfter onsen:AcidicSpring , onsen:SulfurSpring .
+onsen:BicarbonateSpring onsen:recommendedAfter onsen:AcidicSpring , onsen:SulfurSpring .
+onsen:SulfateSpring onsen:recommendedAfter onsen:AcidicSpring , onsen:SulfurSpring .
+onsen:SimpleSpring onsen:recommendedAfter onsen:AcidicSpring , onsen:SulfurSpring .
+
+onsen:AcidicSpring onsen:incompatibleWith onsen:SulfurSpring .

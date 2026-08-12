@@ -1,0 +1,782 @@
+@prefix onsen: <https://example.org/onsen#> .
+@prefix oid:   <https://example.org/onsen/id/> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+#################################################################
+#
+#  温泉オントロジー: 実データ（インスタンス）
+#
+#  15温泉地・27源泉・15施設・9浴槽。数値はすべて施設運営者・自治体・観光協会・
+#  温泉供給事業者の公式サイトに記載された値のみを転記している。
+#  公式サイトに記載がなかった項目は、値を推測せず onsen:dataStatus で
+#  「未確認」と明示している（欠損は述語を持たないことで表現する）。
+#
+#  出典の詳細は docs/research-onsen-data.md（出典ID S1〜S35）を参照。
+#
+#################################################################
+
+#################################################################
+#    温泉地
+#################################################################
+
+oid:area-kusatsu a onsen:OnsenArea ; rdfs:label "草津温泉"@ja ; onsen:prefecture "群馬県" .
+oid:area-arima a onsen:OnsenArea ; rdfs:label "有馬温泉"@ja ; onsen:prefecture "兵庫県" .
+oid:area-beppu-kannawa a onsen:OnsenArea ; rdfs:label "別府温泉郷（鉄輪）"@ja ; onsen:prefecture "大分県" .
+oid:area-beppu-myoban a onsen:OnsenArea ; rdfs:label "別府温泉郷（明礬）"@ja ; onsen:prefecture "大分県" .
+oid:area-hakone-owakudani a onsen:OnsenArea ; rdfs:label "箱根温泉（大涌谷）"@ja ; onsen:prefecture "神奈川県" .
+oid:area-noboribetsu a onsen:OnsenArea ; rdfs:label "登別温泉"@ja ; onsen:prefecture "北海道" .
+oid:area-tamagawa a onsen:OnsenArea ; rdfs:label "玉川温泉"@ja ; onsen:prefecture "秋田県" .
+oid:area-sukayu a onsen:OnsenArea ; rdfs:label "酸ヶ湯温泉"@ja ; onsen:prefecture "青森県" .
+oid:area-manza a onsen:OnsenArea ; rdfs:label "万座温泉"@ja ; onsen:prefecture "群馬県" .
+oid:area-shirahone a onsen:OnsenArea ; rdfs:label "白骨温泉"@ja ; onsen:prefecture "長野県" .
+oid:area-shima a onsen:OnsenArea ; rdfs:label "四万温泉"@ja ; onsen:prefecture "群馬県" .
+oid:area-nagayu a onsen:OnsenArea ; rdfs:label "長湯温泉"@ja ; onsen:prefecture "大分県" .
+oid:area-naruko a onsen:OnsenArea ; rdfs:label "鳴子温泉"@ja ; onsen:prefecture "宮城県" .
+oid:area-gero a onsen:OnsenArea ; rdfs:label "下呂温泉"@ja ; onsen:prefecture "岐阜県" .
+oid:area-misasa a onsen:OnsenArea ; rdfs:label "三朝温泉"@ja ; onsen:prefecture "鳥取県" .
+
+#################################################################
+#    草津温泉 — 同一温泉地で源泉ごとにpHが異なる典型例
+#################################################################
+
+oid:src-kusatsu-yubatake a onsen:SpringSource ;
+    rdfs:label "湯畑源泉"@ja ;
+    onsen:locatedInArea oid:area-kusatsu ;
+    onsen:displayedQualityName "酸性硫黄泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfurSpring ;
+    onsen:pH 2.08 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:flowRate 4000 ;
+    onsen:dataStatus """源泉温度は未確認。草津町は「万代源泉以外の源泉は温度50℃前後で湧出している」と温泉地全体について記述しているが、
+湯畑源泉個別の値ではないため源泉温度は設定していない。
+pHは御座之湯の公表値2.08を採用したが、観光協会は同源泉を2.1／2.05とも表記している。""" ;
+    dcterms:source <http://onsen-kusatsu.com/gozanoyu/hot-spring/> , <https://www.kusatsu-onsen.ne.jp/onsen/> ,
+        <https://www.town.kusatsu.gunma.jp/www/contents/1485254967207/index.html> .
+
+oid:src-kusatsu-bandai a onsen:SpringSource ;
+    rdfs:label "万代源泉"@ja ;
+    onsen:locatedInArea oid:area-kusatsu ;
+    onsen:displayedQualityName "酸性塩化物硫酸塩温泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:ChlorideSpring , onsen:SulfateSpring ;
+    onsen:pH 1.7 ;
+    onsen:sourceTemperature 94.0 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:dataStatus """湧出温度は西の河原露天風呂の公式表記「94〜95度」の下限値を採用。草津町は同源泉を「約94.5℃」と公表しており、
+出典によって表記が異なる。溶存物質量は未確認のため、陰イオン主成分による塩化物泉／硫酸塩泉の細別は掲示泉質名からの読み取りである
+（onsen:hasQualityFromName）。""" ;
+    rdfs:comment """草津町は「万代源泉は約94.5℃と高温のため、プレート式熱交換器を使用し水道水と熱交換して温度を約60℃に下げたものを浴場に利用」と説明している。
+熱交換は温泉に水を混ぜないので法定4類型の「加水」には当たらない。温度調整の手段と加水は別概念である。"""@ja ;
+    dcterms:source <http://onsen-kusatsu.com/sainokawara/hot-spring/> ,
+        <https://www.town.kusatsu.gunma.jp/www/contents/1485254967207/index.html> .
+
+oid:src-kusatsu-nigawa a onsen:SpringSource ;
+    rdfs:label "煮川源泉"@ja ;
+    onsen:locatedInArea oid:area-kusatsu ;
+    onsen:displayedQualityName "酸性硫黄泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfurSpring ;
+    onsen:pH 2.1 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:dataStatus """源泉温度は未確認（公式サイトは「高温」との記載のみ。草津町は「万代源泉以外の源泉は温度50℃前後で湧出」と
+温泉地全体について記述するが、煮川源泉個別の値ではない）。""" ;
+    dcterms:source <http://onsen-kusatsu.com/ohtakinoyu/hot-spring/> ,
+        <https://www.town.kusatsu.gunma.jp/www/contents/1485254967207/index.html> .
+
+oid:fac-gozanoyu a onsen:Facility ;
+    rdfs:label "御座之湯"@ja ;
+    onsen:locatedInArea oid:area-kusatsu ;
+    onsen:address "群馬県吾妻郡草津町大字草津421" ;
+    onsen:hasSpringSource oid:src-kusatsu-yubatake , oid:src-kusatsu-bandai ;
+    onsen:claimsKakenagashi true ;
+    rdfs:comment "湯畑源泉と万代源泉の2源泉を木之湯／石之湯で使い分ける。1施設が複数源泉を持つ例。"@ja ;
+    onsen:dataStatus "加水・加温・循環ろ過・消毒の個別掲示内容は未確認（公式サイトは「源泉かけ流し」の記載のみ）。" ;
+    dcterms:source <http://onsen-kusatsu.com/gozanoyu/hot-spring/> .
+
+oid:fac-sainokawara a onsen:Facility ;
+    rdfs:label "西の河原露天風呂"@ja ;
+    onsen:locatedInArea oid:area-kusatsu ;
+    onsen:address "群馬県吾妻郡草津町大字草津521-3" ;
+    onsen:hasSpringSource oid:src-kusatsu-bandai ;
+    onsen:claimsKakenagashi true ;
+    dcterms:source <http://onsen-kusatsu.com/sainokawara/hot-spring/> .
+
+oid:fac-ohtakinoyu a onsen:Facility ;
+    rdfs:label "大滝乃湯"@ja ;
+    onsen:locatedInArea oid:area-kusatsu ;
+    onsen:address "群馬県吾妻郡草津町大字草津596-13" ;
+    onsen:hasSpringSource oid:src-kusatsu-nigawa ;
+    onsen:claimsKakenagashi true ;
+    onsen:declaresTreatment [
+        a onsen:TreatmentDeclaration ;
+        onsen:treatmentType onsen:AddingWater ;
+        onsen:isApplied false ;
+        onsen:reason "合わせ湯は加水せず自然冷却で温度差をつくる" ] ;
+    dcterms:source <http://onsen-kusatsu.com/ohtakinoyu/hot-spring/> .
+
+#################################################################
+#    有馬温泉 — 「かけ流し」と加水・加温・消毒は排他ではない
+#################################################################
+
+oid:src-arima-kinsen a onsen:SpringSource ;
+    rdfs:label "有馬 金泉"@ja ;
+    onsen:locatedInArea oid:area-arima ;
+    onsen:displayedQualityName "含鉄-ナトリウム-塩化物強塩高温泉" ;
+    onsen:hasQualityFromName onsen:IronSpring , onsen:ChlorideSpring ;
+    onsen:temperatureClass onsen:HighTemperatureSpring ;
+    onsen:sourceTemperature 99.4 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:mainAnion "Cl-" ;
+    onsen:mainCation "Na+" ;
+    onsen:dataStatus """源泉温度は神戸市が公表する天神泉源の泉温99.4℃を採用した。神戸市は「（金の湯）の温泉もここから引湯しています」と明記している。
+pH は施設・神戸市いずれも公表しておらず未確認。神戸市の他の市有泉源の泉温は妬泉源100.5℃・極楽泉源98.1℃・御所泉源63.9℃で、
+金の湯の浴槽は加水・加温を実施しているため浴槽温度はこれらと一致しない。泉温区分は掲示泉質名の「高温泉」から読み取った。""" ;
+    dcterms:source <https://arimaspa-kingin.jp/kin-01.htm> ,
+        <https://www.city.kobe.lg.jp/a64051/arimasengen.html> .
+
+oid:src-arima-ginsen-co2 a onsen:SpringSource ;
+    rdfs:label "有馬 銀泉（炭酸泉）"@ja ;
+    onsen:locatedInArea oid:area-arima ;
+    onsen:displayedQualityName "単純二酸化炭素冷鉱泉" ;
+    onsen:hasQualityFromName onsen:CarbonDioxideSpring ;
+    onsen:temperatureClass onsen:ColdMineralSpring ;
+    onsen:pH 4.3 ;
+    onsen:sourceTemperature 18.3 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:analysisDate "2019-10-25"^^xsd:date ;
+    onsen:dataStatus """pH・泉温・分析年月日は神戸市が公表する炭酸泉源の「温泉の掲示内容」（掲示基準に沿った掲示そのもの）から転記した。
+湧出地は神戸市北区有馬町杉ヶ谷1325-1（炭酸泉源）＝ゆう出口ベース。分析者は公益財団法人中央温泉研究所（14健地衛第1号）、
+決定年月日 2021-03-10・決定者 神戸市。同掲示の泉質名は「含二酸化炭素・鉄－単純冷鉱泉（低張性、弱酸性、冷鉱泉）」で、
+銀の湯の施設掲示「単純二酸化炭素冷鉱泉」と一致しない。掲示名からの読み取りで含鉄を足すことはせず、施設掲示の泉質を維持した。
+掲示には蒸発残留物（110℃）0.422g／kg、ラドン23.3Bq／kg、密度0.9987g／cm³ の記載もあるが、
+蒸発残留物は溶存物質総量と同一の指標ではないため浸透圧区分の判定には用いていない。
+飲用の含有成分別禁忌症として「1日に250mL（よう化物イオンの含有量から算出される限界）を超えて飲用する場合：甲状腺機能亢進症」が掲示されている。""" ;
+    dcterms:source <https://arimaspa-kingin.jp/gin-01.htm> ,
+        <https://www.city.kobe.lg.jp/a64051/kanko/leisure/tansansen.html> ,
+        <https://www.city.kobe.lg.jp/documents/57896/japanese.pdf> .
+
+oid:src-arima-ginsen-radon a onsen:SpringSource ;
+    rdfs:label "有馬 銀泉（ラジウム泉）"@ja ;
+    onsen:locatedInArea oid:area-arima ;
+    onsen:displayedQualityName "単純放射能温泉" ;
+    onsen:hasQualityFromName onsen:RadioactiveSpring ;
+    onsen:dataStatus """pH・源泉温度・ラドン濃度は未確認。神戸市の市有泉源の紹介は金泉4泉源と炭酸泉源のみで、
+銀の湯が使う「山の奥から湧き出るラジウム泉」の泉源は掲載されていない。""" ;
+    dcterms:source <https://arimaspa-kingin.jp/gin-01.htm> ,
+        <https://www.city.kobe.lg.jp/a64051/arimasengen.html> .
+
+oid:fac-arima-kinnoyu a onsen:Facility ;
+    rdfs:label "有馬本温泉 金の湯"@ja ;
+    onsen:locatedInArea oid:area-arima ;
+    onsen:address "兵庫県神戸市北区有馬町833" ;
+    onsen:hasSpringSource oid:src-arima-kinsen ;
+    onsen:claimsKakenagashi true ;
+    onsen:drinkingPermitted false ;
+    rdfs:comment """本オントロジーで isKakenagashi を単一の boolean にしなかった理由そのものの実例。
+公式サイトは給排湯形態を「放流式（かけ流し）」と掲示しながら、加水・加温・塩素消毒をすべて実施すると
+理由付きで掲示している。「かけ流し」であることは湯が無加工であることを意味しない。"""@ja ;
+    onsen:declaresTreatment
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:AddingWater ;
+          onsen:isApplied true ;
+          onsen:reason "水道水・井戸水を加える" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Heating ;
+          onsen:isApplied true ;
+          onsen:reason "蒸気による加温" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Recirculation ;
+          onsen:isApplied false ;
+          onsen:reason "放流式（かけ流し）のため循環させていない" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:BathAdditive ;
+          onsen:isApplied false ;
+          onsen:reason "入浴剤は使用していない" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Disinfection ;
+          onsen:isApplied true ;
+          onsen:reason "塩素系薬剤による消毒。浴槽は毎日完全に抜き取り清掃" ] ;
+    dcterms:source <https://arimaspa-kingin.jp/kin-01.htm> .
+
+oid:fac-arima-ginnoyu a onsen:Facility ;
+    rdfs:label "有馬温泉 銀の湯"@ja ;
+    onsen:locatedInArea oid:area-arima ;
+    onsen:address "兵庫県神戸市北区有馬町1039-1" ;
+    onsen:hasSpringSource oid:src-arima-ginsen-co2 , oid:src-arima-ginsen-radon ;
+    onsen:claimsKakenagashi false ;
+    onsen:declaresTreatment
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Recirculation ;
+          onsen:isApplied true ;
+          onsen:reason "循環濾過式（一部放流式）" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:AddingWater ;
+          onsen:isApplied true ;
+          onsen:reason "源泉からの湯量が低下した場合のみ水道水を加える" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Heating ;
+          onsen:isApplied true ;
+          onsen:reason "熱交換式による加温" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Disinfection ;
+          onsen:isApplied true ;
+          onsen:reason "消毒を実施" ] ;
+    dcterms:source <https://arimaspa-kingin.jp/gin-01.htm> .
+
+#################################################################
+#    別府温泉郷 鉄輪 — 本データセットで最も分析情報が揃った例
+#################################################################
+
+oid:src-hyotan a onsen:SpringSource ;
+    rdfs:label "ひょうたん温泉 源泉"@ja ;
+    onsen:locatedInArea oid:area-beppu-kannawa ;
+    onsen:displayedQualityName "ナトリウム-塩化物泉（弱酸性低張性高温泉）" ;
+    onsen:hasQualityFromName onsen:ChlorideSpring ;
+    onsen:mainAnion "Cl-" ;
+    onsen:mainCation "Na+" ;
+    onsen:pH 3.1 ;
+    onsen:sourceTemperature 100.4 ;
+    onsen:flowRate 500 ;
+    onsen:liquidityClass onsen:WeaklyAcidic ;
+    onsen:osmoticClass onsen:Hypotonic ;
+    onsen:temperatureClass onsen:HighTemperatureSpring ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:analysisDate "1994-02-22"^^xsd:date ;
+    onsen:analysisInstitution "大分県衛生環境研究センター" ;
+    rdfs:comment "3分類軸（液性・浸透圧・泉温）が掲示泉質名に明示されている数少ない例。推論結果の検算に使える。"@ja ;
+    dcterms:source <https://www.hyotan-onsen.com/onsen/> .
+
+oid:fac-hyotan a onsen:Facility ;
+    rdfs:label "ひょうたん温泉"@ja ;
+    onsen:locatedInArea oid:area-beppu-kannawa ;
+    onsen:address "大分県別府市鉄輪159-2" ;
+    onsen:hasSpringSource oid:src-hyotan ;
+    onsen:claimsKakenagashi true ;
+    onsen:drinkingPermitted true ;
+    onsen:declaresTreatment
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:AddingWater ;
+          onsen:isApplied false ;
+          onsen:reason "「湯雨竹（ゆめたけ）」により加水せず自然冷却して源泉十割を維持" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Heating ;
+          onsen:isApplied false ;
+          onsen:reason "源泉が100.4℃であり加温不要" ] ;
+    onsen:dataStatus "循環ろ過・消毒・入浴剤の掲示内容は公式サイト上で未確認。このため isUnmodifiedSupply は導出されない（欠損と否定を区別している）。" ;
+    dcterms:source <https://www.hyotan-onsen.com/onsen/> , <https://www.hyotan-onsen.com/access/> .
+
+#################################################################
+#    別府温泉郷 明礬
+#################################################################
+
+oid:src-okamotoya a onsen:SpringSource ;
+    rdfs:label "岡本屋 自噴源泉"@ja ;
+    onsen:locatedInArea oid:area-beppu-myoban ;
+    onsen:displayedQualityName "酸性・含硫黄-単純温泉（硫化水素型）" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfurSpring , onsen:SimpleSpring ;
+    onsen:isHydrogenSulfideType true ;
+    onsen:dataStatus "pH・源泉温度は未確認（公式サイトは「酸性湯」との記載のみ）。" ;
+    rdfs:comment "特殊成分の付記順位（酸性→含硫黄）が掲示名に現れている例。乳白色は明礬温泉特有の硫黄成分による。"@ja ;
+    dcterms:source <https://www.okamotoya.net/onsen/> .
+
+oid:fac-okamotoya a onsen:Facility ;
+    rdfs:label "明礬温泉 岡本屋"@ja ;
+    onsen:locatedInArea oid:area-beppu-myoban ;
+    onsen:address "大分県別府市明礬4組" ;
+    onsen:hasSpringSource oid:src-okamotoya ;
+    onsen:claimsKakenagashi true ;
+    onsen:drinkingPermitted true ;
+    onsen:declaresTreatment
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:AddingWater ;
+          onsen:isApplied false ;
+          onsen:reason "自噴源泉100%のため加水なし" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Heating ;
+          onsen:isApplied false ;
+          onsen:reason "自噴源泉100%のため加温なし" ] ;
+    rdfs:comment "飲泉は湯口の新鮮なものを食前30分、1回約100cc・1日200〜500cc、約3倍に薄めて、と案内されている。"@ja ;
+    onsen:dataStatus "循環ろ過・消毒・入浴剤の掲示内容は未確認。" ;
+    dcterms:source <https://www.okamotoya.net/onsen/> , <https://www.okamotoya.net/access/> .
+
+#################################################################
+#    箱根 大涌谷 — 造成泉
+#################################################################
+
+oid:src-owakudani a onsen:SpringSource ;
+    rdfs:label "大涌谷温泉（自噴）"@ja ;
+    onsen:locatedInArea oid:area-hakone-owakudani ;
+    onsen:sourceTemperature 64.7 ;
+    onsen:dissolvedSolids 1013.0 ;
+    onsen:hydrogenIon 1.27 ;
+    onsen:hasQuality onsen:AcidicSpring ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    rdfs:comment """水素イオン1.27mg/kg ≧ 1mg/kg なので酸性泉の基準を満たす。
+溶存物質1,013mg/kg は療養泉の基準（1,000mg/kg以上）を満たし、かつ低張性（8,000mg/kg未満）。
+成分値から泉質と3分類軸を推論できる、データセット中唯一の源泉。
+したがって泉質名の表記ではなく成分値による判定なので、onsen:hasQuality を直接主張している唯一の源泉でもある。"""@ja ;
+    dcterms:source <http://www.hakoneonsen.com/definition.html> .
+
+oid:src-hakone-line1 a onsen:SpringSource ;
+    rdfs:label "箱根温泉供給 1号線 造成泉"@ja ;
+    onsen:locatedInArea oid:area-hakone-owakudani ;
+    onsen:displayedQualityName "酸性-カルシウム-硫酸塩温泉" ;
+    onsen:legacyQualityName "酸性-石膏泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfateSpring ;
+    onsen:mainAnion "SO4--" ;
+    onsen:mainCation "Ca++" ;
+    onsen:pH 2.0 ;
+    onsen:isArtificiallyProduced true ;
+    rdfs:comment """噴気（蒸気）と温泉用水を造成装置で混合して製造した造成泉。温泉荘方面へ供給。
+大涌谷で自然に湧く自噴温泉が総湯量の約30%を占め混合される。"""@ja ;
+    onsen:dataStatus "源泉温度は造成系統ごとの値が未確認。大涌谷温泉の泉温64.7℃は oid:src-owakudani 側に記録した。" ;
+    dcterms:source <http://www.hakoneonsen.com/quality.html> , <http://www.hakoneonsen.com/hot_spring.html> .
+
+oid:src-hakone-line23 a onsen:SpringSource ;
+    rdfs:label "箱根温泉供給 2・3号線 造成泉"@ja ;
+    onsen:locatedInArea oid:area-hakone-owakudani ;
+    onsen:displayedQualityName "酸性-カルシウム-硫酸塩・塩化物温泉" ;
+    onsen:legacyQualityName "酸性-含塩化土類石膏泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfateSpring , onsen:ChlorideSpring ;
+    onsen:pH 2.1 ;
+    onsen:isArtificiallyProduced true ;
+    rdfs:comment "仙石原方面（2号線）・強羅方面（3号線）へ供給。"@ja ;
+    onsen:dataStatus "源泉温度は未確認。" ;
+    dcterms:source <http://www.hakoneonsen.com/quality.html> .
+
+#################################################################
+#    登別温泉 — 湯使い4類型すべてを否定形で明記した唯一の例
+#################################################################
+
+oid:src-noboribetsu-1otsu a onsen:SpringSource ;
+    rdfs:label "一号乙泉"@ja ;
+    onsen:locatedInArea oid:area-noboribetsu ;
+    onsen:displayedQualityName "硫黄泉" ;
+    onsen:hasQualityFromName onsen:SulfurSpring ;
+    onsen:dataStatus "pH・源泉温度は未確認。公式サイトは「殺菌力が強い強酸性のお湯」と記述するが、水素イオン濃度の数値がないため酸性泉には分類していない。" ;
+    dcterms:source <https://sagiriyu-noboribetsu.com/daiyokujou/> .
+
+oid:fac-sagiriyu a onsen:Facility ;
+    rdfs:label "登別温泉 さぎり湯"@ja ;
+    onsen:locatedInArea oid:area-noboribetsu ;
+    onsen:address "北海道登別市登別温泉町60番地" ;
+    onsen:hasSpringSource oid:src-noboribetsu-1otsu ;
+    onsen:claimsKakenagashi true ;
+    rdfs:comment """湯使い4類型（加水／加温／循環（ろ過含む）／消毒処理又は入浴剤使用）すべてについて
+「行っていない」と明記している。onsen:isUnmodifiedSupply が推論で導出される数少ない施設。"""@ja ;
+    onsen:declaresTreatment
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:AddingWater ;
+          onsen:isApplied false ;
+          onsen:reason "100%源泉かけ流しのため加水なし" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Heating ;
+          onsen:isApplied false ;
+          onsen:reason "加温なし" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Recirculation ;
+          onsen:isApplied false ;
+          onsen:reason "循環（ろ過含む）なし" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Disinfection ;
+          onsen:isApplied false ;
+          onsen:reason "消毒処理なし" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:BathAdditive ;
+          onsen:isApplied false ;
+          onsen:reason "入浴剤の使用なし" ] ;
+    dcterms:source <https://sagiriyu-noboribetsu.com/daiyokujou/> , <https://sagiriyu-noboribetsu.com/yunituite/> .
+
+#################################################################
+#    玉川温泉 — 浴槽ごとに源泉比率が異なる例
+#################################################################
+
+oid:src-tamagawa a onsen:SpringSource ;
+    rdfs:label "玉川温泉 源泉（大噴）"@ja ;
+    onsen:locatedInArea oid:area-tamagawa ;
+    onsen:displayedQualityName "酸性・含二酸化炭素・鉄（Ⅱ）－塩化物温泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:CarbonDioxideSpring ,
+        onsen:IronSpring , onsen:ChlorideSpring ;
+    onsen:pH 1.2 ;
+    onsen:sourceTemperature 97.3 ;
+    onsen:flowRate 9360 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:dataStatus """掲示用泉質名は玉川温泉公式の「温泉療養指示書」PDF に印字された表記を採用した。
+環境省の八幡平温泉郷 国民保養温泉地計画（平成29年9月改訂）では源泉名「玉川温泉(大墳)」で末尾が「塩化物泉」と表記されており、
+公式PDF の「塩化物温泉」と一字異なる。源泉温度97.3℃と湧出量9,360L/min は同計画書の値（施設公式サイトは大噴を「98℃」と記載）。
+泉質は掲示泉質名の表記から読み取った（onsen:hasQualityFromName）。「酸性」→酸性泉、「含二酸化炭素」→二酸化炭素泉、
+「鉄（Ⅱ）」→含鉄泉、「塩化物」→塩化物泉。成分値（水素イオン濃度 mg/kg 等）は依然として未公表であり、
+pH1.2 という液性の値は泉質の判定には使っていない。判定基準は pH ではなく水素イオン 1mg/kg 以上であることに注意。
+ラドン濃度は未公表で掲示泉質名にも現れないため、放射能泉に該当するかは分からない（分類しない）。""" ;
+    rdfs:comment """成分値が無くても掲示泉質名から泉質を読み取る例。同時に、名称に現れない成分（ラドン）については
+分からないと答える例でもある。液性区分（pH1.2 → 酸性）と泉質（酸性泉）は別の指標である。"""@ja ;
+    dcterms:source <https://www.tamagawa-onsen.jp/> , <https://www.tamagawa-onsen.jp/care/> ,
+        <https://www.tamagawa-onsen.jp/health/pdf/tamagawa_Onsen_Ryouyou_Shijisho.pdf> ,
+        <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_005.pdf> .
+
+oid:fac-tamagawa a onsen:Facility ;
+    rdfs:label "玉川温泉"@ja ;
+    onsen:locatedInArea oid:area-tamagawa ;
+    onsen:address "秋田県仙北市田沢湖玉川渋黒沢" ;
+    onsen:hasSpringSource oid:src-tamagawa ;
+    onsen:drinkingPermitted true ;
+    onsen:hasBath oid:bath-tamagawa-100 , oid:bath-tamagawa-50 ;
+    rdfs:comment "源泉100%／源泉50%／弱酸性浴槽など11種の浴槽を持つ。飲泉は38倍に薄めて利用する。"@ja ;
+    dcterms:source <https://www.tamagawa-onsen.jp/care/> .
+
+oid:bath-tamagawa-100 a onsen:Bath ;
+    rdfs:label "源泉100%浴槽"@ja ;
+    onsen:bathUsesSource oid:src-tamagawa ;
+    onsen:dilutionRatio 1.0 ;
+    rdfs:comment "刺激が強いため、ぬるめに温度調整して供されている。"@ja .
+
+oid:bath-tamagawa-50 a onsen:Bath ;
+    rdfs:label "源泉50%浴槽"@ja ;
+    onsen:bathUsesSource oid:src-tamagawa ;
+    onsen:dilutionRatio 0.5 .
+
+#################################################################
+#    酸ヶ湯温泉
+#################################################################
+
+oid:src-sukayu-netsunoyu a onsen:SpringSource ;
+    rdfs:label "酸ヶ湯 熱の湯 源泉"@ja ;
+    onsen:locatedInArea oid:area-sukayu ;
+    onsen:displayedQualityName "酸性硫黄泉（硫化水素型）" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfurSpring ;
+    onsen:sourceTemperature 48.1 ;
+    onsen:flowRate 110 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:dataStatus "泉質・源泉温度・湧出量は環境省「十和田八幡平国立公園 酸ヶ湯温泉 国民保養温泉地計画」の源泉一覧から転記した。pH は未公表。" ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+oid:src-sukayu-shibunrokubun a onsen:SpringSource ;
+    rdfs:label "酸ヶ湯 四分六分の湯 源泉"@ja ;
+    onsen:locatedInArea oid:area-sukayu ;
+    onsen:displayedQualityName "酸性硫黄泉（硫化水素型）" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfurSpring ;
+    onsen:sourceTemperature 56.7 ;
+    onsen:flowRate 97 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:dataStatus "泉質・源泉温度・湧出量は環境省の国民保養温泉地計画から転記した。pH は公表されておらず未確認。" ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+oid:src-sukayu-shikanoyu a onsen:SpringSource ;
+    rdfs:label "酸ヶ湯 鹿の湯 源泉"@ja ;
+    onsen:locatedInArea oid:area-sukayu ;
+    onsen:displayedQualityName "酸性硫酸塩・塩化物泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfateSpring , onsen:ChlorideSpring ;
+    onsen:sourceTemperature 67.6 ;
+    onsen:flowRate 23.7 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:dataStatus """泉質・源泉温度・湧出量は環境省の国民保養温泉地計画から転記した。pH は公表されておらず未確認。
+同じ千人風呂の他の源泉と違い硫黄泉ではなく硫酸塩・塩化物泉である（1施設・1浴室の中で源泉ごとに泉質が異なる例）。""" ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+oid:src-sukayu-hienoyu-dai a onsen:SpringSource ;
+    rdfs:label "酸ヶ湯 冷の湯（大） 源泉"@ja ;
+    onsen:locatedInArea oid:area-sukayu ;
+    onsen:displayedQualityName "酸性硫黄泉（硫化水素型）" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfurSpring ;
+    onsen:sourceTemperature 64.8 ;
+    onsen:flowRate 94 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:dataStatus "泉質・源泉温度・湧出量は環境省の国民保養温泉地計画から転記した。pH は公表されておらず未確認。" ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+oid:src-sukayu-hienoyu-sho a onsen:SpringSource ;
+    rdfs:label "酸ヶ湯 冷の湯（小） 源泉"@ja ;
+    onsen:locatedInArea oid:area-sukayu ;
+    onsen:displayedQualityName "酸性硫黄泉（硫化水素型）" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfurSpring ;
+    onsen:sourceTemperature 69.7 ;
+    onsen:flowRate 25 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:dataStatus "泉質・源泉温度・湧出量は環境省の国民保養温泉地計画から転記した。pH は公表されておらず未確認。" ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+oid:fac-sukayu a onsen:Facility ;
+    rdfs:label "酸ヶ湯温泉 ヒバ千人風呂"@ja ;
+    onsen:locatedInArea oid:area-sukayu ;
+    onsen:address "青森県青森市荒川南荒川山国有林酸湯沢50番地" ;
+    onsen:hasSpringSource oid:src-sukayu-netsunoyu , oid:src-sukayu-shibunrokubun ,
+        oid:src-sukayu-shikanoyu , oid:src-sukayu-hienoyu-dai , oid:src-sukayu-hienoyu-sho ;
+    onsen:hasBath oid:bath-sukayu-netsunoyu , oid:bath-sukayu-shibunrokubun , oid:bath-sukayu-shikanoyu ;
+    rdfs:comment """総ヒバ造りの千人風呂は「熱の湯」「四分六分の湯」「鹿の湯」「冷の湯」の4浴槽に分かれている（環境省の計画書の記述）。
+施設公式サイトの掲示表記は「酸性硫黄泉（含石膏、酸性硫化水素泉）（緊張低張性温泉）」で、5源泉をまとめて1つの泉質名で示している。
+国民保養温泉地 第1号（昭和29年指定）。湯治の目安は「3日1廻りで3廻り＝約10日」と案内されている。"""@ja ;
+    onsen:dataStatus """湯使い（かけ流し等）の明記なし。施設掲示の「緊張低張性温泉」は一般の掲示形式（例:「酸性低張性高温泉」）と異なる表記である。
+浸透圧区分は施設掲示に基づく記述であり源泉ごとの溶存物質量は未公表なので、源泉個体には設定していない。
+「冷の湯」浴槽が冷の湯（大）（小）のどちらの源泉を用いるかは公表資料から特定できないため、浴槽としては登録していない。
+環境省の計画書には非浴用の「ふかし湯」（88.0℃・48L/min）も記載がある。""" ;
+    dcterms:source <https://sukayu.jp/facility/> , <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+oid:bath-sukayu-netsunoyu a onsen:Bath ;
+    rdfs:label "熱の湯（千人風呂）"@ja ;
+    onsen:bathUsesSource oid:src-sukayu-netsunoyu ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+oid:bath-sukayu-shibunrokubun a onsen:Bath ;
+    rdfs:label "四分六分の湯（千人風呂）"@ja ;
+    onsen:bathUsesSource oid:src-sukayu-shibunrokubun ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+oid:bath-sukayu-shikanoyu a onsen:Bath ;
+    rdfs:label "鹿の湯（千人風呂）"@ja ;
+    onsen:bathUsesSource oid:src-sukayu-shikanoyu ;
+    dcterms:source <https://www.env.go.jp/nature/onsen/area/pdf/hoyo_004.pdf> .
+
+#################################################################
+#    万座温泉
+#################################################################
+
+oid:src-manza-nisshinkan a onsen:SpringSource ;
+    rdfs:label "万座 日進舘 源泉"@ja ;
+    onsen:locatedInArea oid:area-manza ;
+    onsen:displayedQualityName "酸性硫黄泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfurSpring ;
+    onsen:sourceTemperature 75.0 ;
+    onsen:temperatureClass onsen:HighTemperatureSpring ;
+    onsen:flowRate 700 ;
+    onsen:dataStatus "源泉温度は公式表記「75℃以上」の下限値を採用（同サイト内に「約80度」の記載もある）。pHは未確認。" ;
+    dcterms:source <https://www.manza.co.jp/spa/> .
+
+oid:fac-manza-nisshinkan a onsen:Facility ;
+    rdfs:label "万座温泉 日進舘"@ja ;
+    onsen:locatedInArea oid:area-manza ;
+    onsen:address "群馬県吾妻郡嬬恋村干俣2401" ;
+    onsen:hasSpringSource oid:src-manza-nisshinkan ;
+    onsen:claimsKakenagashi true ;
+    onsen:declaresTreatment
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Recirculation ;
+          onsen:isApplied false ;
+          onsen:reason "自噴（自然湧出）のかけ流しであり循環ではない" ] ;
+    dcterms:source <https://www.manza.co.jp/spa/> , <https://www.manzaonsen.gr.jp/introduction> .
+
+#################################################################
+#    白骨温泉 — 低温泉のため加温する例
+#################################################################
+
+oid:src-shirahone-awanoyu a onsen:SpringSource ;
+    rdfs:label "新泡の湯源泉"@ja ;
+    onsen:locatedInArea oid:area-shirahone ;
+    onsen:displayedQualityName "含硫黄－カルシウム・マグネシウム－炭酸水素塩温泉（硫化水素型）" ;
+    onsen:hasQualityFromName onsen:SulfurSpring , onsen:BicarbonateSpring ;
+    onsen:isHydrogenSulfideType true ;
+    onsen:mainAnion "HCO3-" ;
+    onsen:pH 6.3 ;
+    onsen:sourceTemperature 37.3 ;
+    onsen:flowRate 1730 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    onsen:analysisDate "2007-06-26"^^xsd:date ;
+    rdfs:comment """乳白色だが強酸性ではなく中性に近い。38℃前後で炭酸ガスを含む硫黄泉のため泡付きが良いと説明されている。
+硫化水素型のため、掲示基準では浴用適応症に末梢循環障害が加わる。"""@ja ;
+    dcterms:source <https://www.awanoyu-ryokan.com/droten.html> , <https://shirahone.org/onsen> .
+
+oid:fac-awanoyu a onsen:Facility ;
+    rdfs:label "白骨温泉 泡の湯旅館"@ja ;
+    onsen:locatedInArea oid:area-shirahone ;
+    onsen:address "長野県松本市安曇4181-8" ;
+    onsen:hasSpringSource oid:src-shirahone-awanoyu ;
+    onsen:claimsKakenagashi true ;
+    onsen:drinkingPermitted true ;
+    onsen:hasBath oid:bath-awanoyu-nuruyu , oid:bath-awanoyu-sarayu ;
+    rdfs:comment "加温を否定条件に入れると低温泉の無加工供給を表現できなくなる、という設計判断の実例。"@ja ;
+    onsen:declaresTreatment
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Heating ;
+          onsen:isApplied true ;
+          onsen:reason "源泉温度が37.3℃とぬるいため、快適な入浴のため加温または一部加温" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:AddingWater ;
+          onsen:isApplied false ;
+          onsen:reason "白骨温泉はすべて源泉かけ流し" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Recirculation ;
+          onsen:isApplied false ;
+          onsen:reason "源泉かけ流しのため循環なし" ] ;
+    onsen:dataStatus "消毒・入浴剤の掲示内容は未確認。" ;
+    dcterms:source <https://www.awanoyu-ryokan.com/droten.html> .
+
+oid:bath-awanoyu-nuruyu a onsen:Bath ;
+    rdfs:label "内湯ぬる湯"@ja ;
+    onsen:bathUsesSource oid:src-shirahone-awanoyu ;
+    onsen:bathTemperature 37.0 .
+
+oid:bath-awanoyu-sarayu a onsen:Bath ;
+    rdfs:label "内湯さら湯"@ja ;
+    onsen:bathUsesSource oid:src-shirahone-awanoyu ;
+    onsen:bathTemperature 40.0 .
+
+#################################################################
+#    四万温泉 — 「草津の仕上げ湯」の一次記述
+#################################################################
+
+oid:src-shima-sekizenkan a onsen:SpringSource ;
+    rdfs:label "積善館 源泉"@ja ;
+    onsen:locatedInArea oid:area-shima ;
+    onsen:displayedQualityName "ナトリウム・カルシウム 塩化物硫酸塩温泉" ;
+    onsen:hasQualityFromName onsen:ChlorideSpring , onsen:SulfateSpring ;
+    onsen:mainCation "Na+" ;
+    onsen:dataStatus "pH・源泉温度は未確認。四万温泉協会は温泉地全体の泉質を「ナトリウム・カルシウムー塩化物・硫酸塩泉」と記述（42源泉）。" ;
+    dcterms:source <https://www.sekizenkan.co.jp/spa/> , <https://shimaonsen.com/about> .
+
+oid:fac-sekizenkan a onsen:Facility ;
+    rdfs:label "四万温泉 積善館"@ja ;
+    onsen:locatedInArea oid:area-shima ;
+    onsen:address "群馬県吾妻郡中之条町四万温泉" ;
+    onsen:hasSpringSource oid:src-shima-sekizenkan ;
+    onsen:claimsKakenagashi true ;
+    onsen:drinkingPermitted true ;
+    rdfs:comment """公式サイトが「草津の仕上げ湯」と記述している。強酸性の草津で湯治した後、
+保湿・美肌効果のある四万に滞在する慣習があったと説明されており、
+onsen:recommendedAfter（独自ヒューリスティック）の支持根拠としている記述そのもの。
+飲泉は飲泉許可を取得済み。"""@ja ;
+    dcterms:source <https://www.sekizenkan.co.jp/spa/> .
+
+#################################################################
+#    長湯温泉 — 飲泉と炭酸のモデルケース、無加工供給の2例目
+#################################################################
+
+oid:src-nagayu-1 a onsen:SpringSource ;
+    rdfs:label "長湯温泉 御前湯 1号源泉"@ja ;
+    onsen:locatedInArea oid:area-nagayu ;
+    onsen:displayedQualityName "マグネシウム・ナトリウム－炭酸水素塩泉" ;
+    onsen:hasQualityFromName onsen:BicarbonateSpring ;
+    onsen:mainAnion "HCO3-" ;
+    onsen:pH 6.8 ;
+    onsen:sourceTemperature 47.2 ;
+    onsen:freeCarbonDioxide 572.0 ;
+    onsen:bicarbonateIon 2400.0 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    rdfs:comment """遊離二酸化炭素572mg/kgは二酸化炭素泉の基準（1,000mg/kg以上）に達しないため、
+泉質名は炭酸水素塩泉となる。炭酸を含むことと二酸化炭素泉であることは別、という判定の実例。
+1階大浴場・貸切家族風呂で使用。"""@ja ;
+    dcterms:source <https://gozenyu.com/onsen.html> .
+
+oid:src-nagayu-2 a onsen:SpringSource ;
+    rdfs:label "長湯温泉 御前湯 2号源泉"@ja ;
+    onsen:locatedInArea oid:area-nagayu ;
+    onsen:displayedQualityName "マグネシウム・ナトリウム－炭酸水素塩泉" ;
+    onsen:hasQualityFromName onsen:BicarbonateSpring ;
+    onsen:pH 6.7 ;
+    onsen:sourceTemperature 48.1 ;
+    onsen:freeCarbonDioxide 677.0 ;
+    onsen:bicarbonateIon 2680.0 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    rdfs:comment "3階大浴場で使用。"@ja ;
+    dcterms:source <https://gozenyu.com/onsen.html> .
+
+oid:src-nagayu-3 a onsen:SpringSource ;
+    rdfs:label "長湯温泉 御前湯 3号源泉（冷泉）"@ja ;
+    onsen:locatedInArea oid:area-nagayu ;
+    onsen:displayedQualityName "マグネシウム・ナトリウム－炭酸水素塩泉" ;
+    onsen:hasQualityFromName onsen:BicarbonateSpring ;
+    onsen:pH 6.6 ;
+    onsen:sourceTemperature 29.9 ;
+    onsen:freeCarbonDioxide 440.0 ;
+    onsen:bicarbonateIon 1000.0 ;
+    onsen:measurementPoint onsen:AtSourceOutlet ;
+    rdfs:comment "1階・3階の冷泉で使用。泉温29.9℃は低温泉（25℃以上34℃未満）に該当する。"@ja ;
+    dcterms:source <https://gozenyu.com/onsen.html> .
+
+oid:fac-gozenyu a onsen:Facility ;
+    rdfs:label "長湯温泉 御前湯（竹田市営）"@ja ;
+    onsen:locatedInArea oid:area-nagayu ;
+    onsen:address "大分県竹田市直入町長湯7962-1" ;
+    onsen:hasSpringSource oid:src-nagayu-1 , oid:src-nagayu-2 , oid:src-nagayu-3 ;
+    onsen:claimsKakenagashi true ;
+    onsen:drinkingPermitted true ;
+    rdfs:comment """「温泉に何も加えず源泉をそのまま利用している」ため館内すべての湯口から飲泉できると説明されている。
+長湯温泉全体では利用源泉51本・毎分4,479リットル。"""@ja ;
+    onsen:declaresTreatment
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:AddingWater ;
+          onsen:isApplied false ;
+          onsen:reason "温泉に何も加えず源泉をそのまま利用" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Heating ;
+          onsen:isApplied false ;
+          onsen:reason "源泉温度47.2℃のため加温不要" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Recirculation ;
+          onsen:isApplied false ;
+          onsen:reason "源泉をそのまま利用" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:Disinfection ;
+          onsen:isApplied false ;
+          onsen:reason "温泉に何も加えていない" ] ,
+        [ a onsen:TreatmentDeclaration ;
+          onsen:treatmentType onsen:BathAdditive ;
+          onsen:isApplied false ;
+          onsen:reason "温泉に何も加えていない" ] ;
+    dcterms:source <https://gozenyu.com/onsen.html> .
+
+#################################################################
+#    鳴子温泉 — 旧泉質名のみ公表されている例
+#################################################################
+
+oid:src-naruko-takinoyu a onsen:SpringSource ;
+    rdfs:label "鳴子 滝の湯 源泉"@ja ;
+    onsen:locatedInArea oid:area-naruko ;
+    onsen:legacyQualityName "酸性含明礬・緑礬-芒硝硫化水素泉" ;
+    onsen:hasQualityFromName onsen:AcidicSpring , onsen:SulfateSpring , onsen:SulfurSpring ;
+    onsen:pH 2.9 ;
+    onsen:dataStatus """公表されているのは旧泉質名のみ。掲示用泉質への対応づけは旧泉質名の表記からの読み取りであり
+（onsen:hasQualityFromName）、施設の掲示内容そのものではない（酸性→酸性泉、明礬・緑礬／芒硝→硫酸塩泉、硫化水素→硫黄泉）。
+成分値・源泉温度・湯使いは未確認。""" ;
+    dcterms:source <https://narukoonsenkyo.web.fc2.com/takinoyu/index.html> .
+
+oid:fac-takinoyu a onsen:Facility ;
+    rdfs:label "鳴子温泉 滝の湯"@ja ;
+    onsen:locatedInArea oid:area-naruko ;
+    onsen:address "宮城県大崎市鳴子温泉湯元" ;
+    onsen:hasSpringSource oid:src-naruko-takinoyu ;
+    onsen:hasBath oid:bath-takinoyu-1 , oid:bath-takinoyu-2 ;
+    rdfs:comment "鳴子温泉神社の御神湯とされる共同浴場。"@ja ;
+    dcterms:source <https://narukoonsenkyo.web.fc2.com/takinoyu/index.html> .
+
+oid:bath-takinoyu-1 a onsen:Bath ;
+    rdfs:label "第1浴槽"@ja ;
+    onsen:bathUsesSource oid:src-naruko-takinoyu ;
+    onsen:bathTemperature 44.0 ;
+    onsen:dataStatus "公表値は44〜46℃。下限値を採用。" .
+
+oid:bath-takinoyu-2 a onsen:Bath ;
+    rdfs:label "第2浴槽"@ja ;
+    onsen:bathUsesSource oid:src-naruko-takinoyu ;
+    onsen:bathTemperature 39.0 ;
+    onsen:dataStatus "公表値は39〜41℃。下限値を採用。" .
+
+#################################################################
+#    下呂温泉 — アルカリ性単純温泉の代表例
+#################################################################
+
+oid:src-gero-mori a onsen:SpringSource ;
+    rdfs:label "下呂温泉（湯之島・森地区）"@ja ;
+    onsen:locatedInArea oid:area-gero ;
+    onsen:displayedQualityName "単純温泉（アルカリ性単純温泉）" ;
+    onsen:hasQualityFromName onsen:SimpleSpring ;
+    onsen:pH 9.2 ;
+    onsen:dataStatus "源泉温度は未確認（公式サイトの温泉分析表PDFは画像PDFのため数値抽出不可）。" ;
+    rdfs:comment """pH9.2 ≧ 8.5 のため「アルカリ性単純温泉」と称される。日本三名泉（下呂・有馬・草津）のひとつ。
+強酸性泉のあとの仕上げ湯として推論上有力な候補になる。"""@ja ;
+    dcterms:source <https://www.gero-spa.com/onsen/> .
+
+#################################################################
+#    三朝温泉 — 放射能泉
+#################################################################
+
+oid:src-misasa-kabuyu a onsen:SpringSource ;
+    rdfs:label "三朝温泉（株湯ほか）"@ja ;
+    onsen:locatedInArea oid:area-misasa ;
+    onsen:displayedQualityName "含放射能／ナトリウム・塩化物泉" ;
+    onsen:hasQualityFromName onsen:RadioactiveSpring , onsen:ChlorideSpring ;
+    onsen:mainAnion "Cl-" ;
+    onsen:mainCation "Na+" ;
+    onsen:dataStatus "pH・源泉温度・ラドン濃度は未確認。公式サイトは「含放射能／単純泉」も併記している。" ;
+    rdfs:comment "高濃度のラドンを含む放射能泉。ラドン熱気浴、飲泉場（株湯そば）が公式に案内されている。"@ja ;
+    dcterms:source <https://misasaonsen.jp/about/> .

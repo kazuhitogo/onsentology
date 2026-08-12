@@ -1,0 +1,731 @@
+@prefix onsen: <https://example.org/onsen#> .
+@prefix owl:   <http://www.w3.org/2002/07/owl#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix skos:  <http://www.w3.org/2004/02/skos/core#> .
+
+#################################################################
+#    オントロジー本体宣言
+#################################################################
+
+<https://example.org/onsen> a owl:Ontology ;
+    dcterms:title "温泉オントロジー (Onsen Ontology)"@ja ;
+    dcterms:description """日本の温泉に関する法制度・分類体系のオントロジー。
+温泉法（昭和23年法律第125号）、鉱泉分析法指針（平成26年改訂）、
+温泉法第18条第1項の規定に基づく掲示基準（環自総発第1407012号、平成26年7月1日）を
+一次情報として構築している。
+
+【免責事項】本オントロジーは情報工学的な知識表現の技術検証物であり、医療的助言ではない。
+適応症・禁忌症は上記掲示基準の条文内容の引用であって、個人の健康判断の根拠ではない。
+掲示基準自体が温泉療養は「専門的知識を有する医師による指示、指導のもとに行うことが望ましい」と定めている。"""@ja ;
+    dcterms:license "CC-BY-4.0" ;
+    owl:versionInfo "0.1.0" ;
+    onsen:primarySource
+        <https://www.env.go.jp/nature/onsen/pdf/2-5_p_14.pdf> ,
+        <https://www.env.go.jp/nature/onsen/pdf/2-5_p_11.pdf> ,
+        <https://www.env.go.jp/nature/onsen/pdf/2-5_p_10.pdf> ,
+        <https://www.env.go.jp/nature/onsen/pdf/2-5_p_1r.pdf> .
+
+#################################################################
+#    メタプロパティ（出典・法的位置づけの記録用）
+#################################################################
+
+onsen:primarySource a owl:AnnotationProperty ;
+    rdfs:label "一次情報源"@ja ;
+    rdfs:comment "この記述の根拠となる一次情報のURL。"@ja .
+
+onsen:legalBasis a owl:AnnotationProperty ;
+    rdfs:label "法的根拠"@ja ;
+    rdfs:comment "根拠となる法令・通知の条項。例: 「温泉法施行規則第10条第2項」。"@ja .
+
+onsen:heuristicRule a owl:AnnotationProperty ;
+    rdfs:label "独自ヒューリスティック"@ja ;
+    rdfs:comment """法令に根拠を持たない、本プロジェクト独自の経験的ルールであることの明示。
+値には、そのルールを支持する記述の出所を書く。法定知識と混同してはならない。"""@ja .
+
+onsen:dataStatus a owl:AnnotationProperty ;
+    rdfs:label "データ状態"@ja ;
+    rdfs:comment "「未確認」など、データ取得状況の注記。"@ja .
+
+#################################################################
+#    1. 地理・施設・源泉
+#################################################################
+
+onsen:OnsenArea a owl:Class ;
+    rdfs:label "温泉地"@ja ;
+    rdfs:comment "草津温泉、有馬温泉など、慣習的にまとまりとして扱われる温泉の地域。行政区分ではない。"@ja .
+
+onsen:Facility a owl:Class ;
+    rdfs:label "温泉施設"@ja ;
+    rdfs:comment """温泉を公共の浴用又は飲用に供する施設（共同浴場、旅館、日帰り温泉など）。
+温泉法第18条の掲示義務の主体であり、湯使いの宣言と飲用許可はこのクラスに属する。"""@ja ;
+    onsen:legalBasis "温泉法第18条第1項" .
+
+onsen:SpringSource a owl:Class ;
+    rdfs:label "源泉"@ja ;
+    rdfs:comment """個別の源泉（ゆう出口）。成分値・pH・泉温はすべてこのクラスに属する。
+施設と源泉を分離するのは、1施設が複数源泉を使い分け、かつ同一温泉地内で源泉ごとに
+pHが大きく異なるため（例: 草津は湯畑源泉 pH2.08 / 万代源泉 pH1.7 / 煮川源泉 pH2.1）。"""@ja .
+
+onsen:Bath a owl:Class ;
+    rdfs:label "浴槽"@ja ;
+    rdfs:comment """個別の浴槽。源泉の希釈率や浴槽温度が浴槽ごとに異なる場合に用いる
+（例: 玉川温泉は源泉100%・源泉50%・弱酸性の浴槽が並立する）。"""@ja .
+
+onsen:hasSpringSource a owl:ObjectProperty ;
+    rdfs:label "利用源泉"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range onsen:SpringSource ;
+    owl:inverseOf onsen:isSourceOf .
+
+onsen:isSourceOf a owl:ObjectProperty ;
+    rdfs:label "供給先施設"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range onsen:Facility .
+
+onsen:hasBath a owl:ObjectProperty ;
+    rdfs:label "浴槽"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range onsen:Bath .
+
+onsen:bathUsesSource a owl:ObjectProperty ;
+    rdfs:label "浴槽の使用源泉"@ja ;
+    rdfs:domain onsen:Bath ;
+    rdfs:range onsen:SpringSource .
+
+onsen:locatedInArea a owl:ObjectProperty ;
+    rdfs:label "所在温泉地"@ja ;
+    rdfs:range onsen:OnsenArea .
+
+onsen:address a owl:DatatypeProperty ;
+    rdfs:label "所在地"@ja ;
+    rdfs:range xsd:string .
+
+onsen:prefecture a owl:DatatypeProperty ;
+    rdfs:label "都道府県"@ja ;
+    rdfs:range xsd:string .
+
+#################################################################
+#    2. 泉質（掲示用泉質10種）
+#################################################################
+
+onsen:SpringQuality a owl:Class ;
+    rdfs:label "掲示用泉質"@ja ;
+    rdfs:comment """掲示基準（環自総発第1407012号）の泉質別適応症・泉質別禁忌症の表で用いられる泉質区分。
+ちょうど10種類であり、これを個体（インスタンス）として列挙する。
+療養泉の基準を満たさない温泉には泉質名がつかない点に注意。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針（平成26年改訂）1-3、掲示基準 別表" .
+
+onsen:SaltSpringQuality a owl:Class ;
+    rdfs:subClassOf onsen:SpringQuality ;
+    rdfs:label "塩類泉"@ja ;
+    rdfs:comment "溶存物質（ガス性のものを除く）1,000mg/kg以上で、陰イオン主成分により細別される泉質（塩化物泉・炭酸水素塩泉・硫酸塩泉）。"@ja .
+
+onsen:SpecialComponentSpringQuality a owl:Class ;
+    rdfs:subClassOf onsen:SpringQuality ;
+    rdfs:label "特殊成分を含む療養泉"@ja ;
+    rdfs:comment "特定成分が限界値以上含まれることで泉質名がつくもの（二酸化炭素泉・含鉄泉・酸性泉・含よう素泉・硫黄泉・放射能泉）。"@ja .
+
+onsen:hasQuality a owl:ObjectProperty ;
+    rdfs:label "泉質"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range onsen:SpringQuality ;
+    rdfs:comment """源泉が該当する掲示用泉質。複数該当しうる（例: 酸性・含硫黄－単純温泉は酸性泉と硫黄泉に該当）。
+検索・巡浴プラン・エージェントのツールはこのプロパティを使う。判定根拠の区別が必要なときは
+下位プロパティ onsen:hasQualityFromName（泉質名の表記からの読み取り）を見る。
+成分値からの判定（R4）はこのプロパティを直接主張する。"""@ja .
+
+onsen:hasQualityFromName a owl:ObjectProperty ;
+    rdfs:subPropertyOf onsen:hasQuality ;
+    rdfs:label "泉質名の表記から読み取った泉質"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range onsen:SpringQuality ;
+    onsen:legalBasis "鉱泉分析法指針 1-3(3)3)・1-3(4)（特殊成分の泉質名への付記規則）、掲示基準 2.(1)①" ;
+    rdfs:comment """掲示泉質名（onsen:displayedQualityName）または旧泉質名（onsen:legacyQualityName）の
+**表記から読み取った**掲示用泉質。成分値（第1-3表の判定基準）を当てはめた判定ではないので、
+根拠の強さが違う。それを型で残すために hasQuality の下位プロパティとして分けた。
+
+読み取れる理由は、泉質名の綴り自体が指針の命名規則に従うことである。水素イオン1mg/kg以上なら
+先頭に「酸性」、総硫黄・遊離二酸化炭素・ラドン・総鉄・よう化物イオンが限界値以上なら「含硫黄」
+「含二酸化炭素」等を付記する（指針 1-3(3)3)・(4)）。掲示泉質名は温泉分析書に基づいて掲示する
+義務があるので、名称に現れた特殊成分は限界値以上あると読める。
+
+限界は、名称に現れない成分については何も言えないこと。「酸性・含二酸化炭素・鉄（Ⅱ）－塩化物温泉」
+からは酸性泉・二酸化炭素泉・含鉄泉・塩化物泉が読めるが、ラドン濃度は名称に現れないので
+放射能泉に該当するかは分からない。分からないものは主張しない。
+
+上位プロパティの hasQuality は推論器（rdfs:subPropertyOf）が導出する。手で両方書かない。"""@ja .
+
+# 施設から泉質への畳み込み（OWL 2 プロパティチェーン公理）
+onsen:facilityHasQuality a owl:ObjectProperty ;
+    rdfs:label "施設の泉質"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range onsen:SpringQuality ;
+    owl:propertyChainAxiom ( onsen:hasSpringSource onsen:hasQuality ) ;
+    rdfs:comment "hasSpringSource ∘ hasQuality。推論器が導出する。手で書かない。"@ja .
+
+onsen:displayedQualityName a owl:DatatypeProperty ;
+    rdfs:label "掲示泉質名"@ja ;
+    rdfs:range xsd:string ;
+    rdfs:comment """施設が実際に掲示・公表している泉質名の文字列。
+`<泉質名>（<浸透圧><液性><泉温>）` という合成構造を取ることが多い
+（例: 「ナトリウム-塩化物泉（弱酸性低張性高温泉）」）。"""@ja .
+
+onsen:legacyQualityName a owl:DatatypeProperty ;
+    rdfs:label "旧泉質名"@ja ;
+    rdfs:range xsd:string ;
+    rdfs:comment """旧泉質名（食塩泉・重曹泉・石膏泉など）。併記は禁止されていないが必須でもない。
+ただし放射能泉を「ラヂウム泉」と表記するのは不適当とされる。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 付表-1" .
+
+# --- 泉質の判定基準（機械可読な閾値） --------------------------------
+# 泉質判定を Python にハードコードせず、グラフ側の宣言で駆動できるようにする。
+
+onsen:criterionProperty a owl:ObjectProperty ;
+    rdfs:label "判定対象の成分プロパティ"@ja ;
+    rdfs:domain onsen:SpringQuality ;
+    rdfs:comment "この泉質の判定に用いる成分のデータプロパティ（例: onsen:totalSulfur）。"@ja .
+
+onsen:criterionMinValue a owl:DatatypeProperty ;
+    rdfs:label "判定下限値"@ja ;
+    rdfs:domain onsen:SpringQuality ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "criterionProperty の値がこの値以上であれば該当（単位は当該プロパティに従う）。"@ja .
+
+onsen:criterionMaxValue a owl:DatatypeProperty ;
+    rdfs:label "判定上限値"@ja ;
+    rdfs:domain onsen:SpringQuality ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "criterionProperty の値がこの値未満であれば該当。単純温泉の判定に用いる。"@ja .
+
+onsen:criterionMinTemperature a owl:DatatypeProperty ;
+    rdfs:label "判定に必要な下限泉温(℃)"@ja ;
+    rdfs:domain onsen:SpringQuality ;
+    rdfs:range xsd:decimal .
+
+onsen:criterionMainAnion a owl:DatatypeProperty ;
+    rdfs:label "判定に必要な陰イオン主成分"@ja ;
+    rdfs:domain onsen:SpringQuality ;
+    rdfs:range xsd:string ;
+    rdfs:comment """塩類泉の細別に用いる。「主成分」とはミリバル(mval)値が最も大きいものをいう。
+本オントロジーは mval 値そのものは保持せず、公表されている泉質名からの逆引きに用いる。"""@ja .
+
+onsen:mainAnion a owl:DatatypeProperty ;
+    rdfs:label "陰イオン主成分"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range xsd:string .
+
+onsen:mainCation a owl:DatatypeProperty ;
+    rdfs:label "陽イオン主成分"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range xsd:string .
+
+onsen:isHydrogenSulfideType a owl:DatatypeProperty ;
+    rdfs:label "硫化水素型"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment """硫黄が遊離硫化水素の型で主として含有される場合に付記される。
+判定式は [H2S] > [HS-] + [S2O3^2-]（各成分のモル濃度 mmol/kg）。
+硫化水素型の硫黄泉は浴用適応症に末梢循環障害が加わる。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-3(3)、掲示基準 3.(1) 硫黄泉の項" .
+
+onsen:isAlkalineSimpleSpring a owl:DatatypeProperty ;
+    rdfs:label "アルカリ性単純温泉（推論値）"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment """単純温泉であって現地pH測定値が8.5以上のものは「アルカリ性単純温泉」と称される。
+推論で導出される。手で書かない。"""@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-3(2)" .
+
+
+
+#################################################################
+#    3. 分類3軸（泉温・液性・浸透圧）
+#################################################################
+
+onsen:QualityClassification a owl:Class ;
+    rdfs:label "泉質分類区分"@ja ;
+    rdfs:comment "泉質名に併記される分類区分の上位クラス。"@ja .
+
+onsen:TemperatureClass a owl:Class ;
+    rdfs:subClassOf onsen:QualityClassification ;
+    rdfs:label "泉温区分"@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-2(1)" .
+
+onsen:LiquidityClass a owl:Class ;
+    rdfs:subClassOf onsen:QualityClassification ;
+    rdfs:label "液性区分"@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-2(2)" .
+
+onsen:OsmoticPressureClass a owl:Class ;
+    rdfs:subClassOf onsen:QualityClassification ;
+    rdfs:label "浸透圧区分"@ja ;
+    onsen:legalBasis "鉱泉分析法指針 1-2(3)" .
+
+onsen:temperatureClass a owl:ObjectProperty ;
+    rdfs:label "泉温区分"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range onsen:TemperatureClass .
+
+onsen:liquidityClass a owl:ObjectProperty ;
+    rdfs:label "液性区分"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range onsen:LiquidityClass .
+
+onsen:osmoticClass a owl:ObjectProperty ;
+    rdfs:label "浸透圧区分"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range onsen:OsmoticPressureClass .
+
+# --- 泉温区分の個体 -------------------------------------------------
+onsen:ColdMineralSpring a onsen:TemperatureClass ;
+    rdfs:label "冷鉱泉"@ja ;
+    onsen:maxTemperature 25.0 .
+
+onsen:LowTemperatureSpring a onsen:TemperatureClass ;
+    rdfs:label "低温泉"@ja ;
+    skos:altLabel "微温泉"@ja ;
+    onsen:minTemperature 25.0 ;
+    onsen:maxTemperature 34.0 ;
+    rdfs:comment "指針の正式名称は「低温泉」。「微温泉」は指針の分類表には現れない俗称。"@ja .
+
+onsen:MildTemperatureSpring a onsen:TemperatureClass ;
+    rdfs:label "温泉（泉温区分）"@ja ;
+    onsen:minTemperature 34.0 ;
+    onsen:maxTemperature 42.0 ;
+    rdfs:comment """指針上の名称は単に「温泉」。上位概念の「温泉」と衝突するため、
+URIは MildTemperatureSpring として区別している。"""@ja .
+
+onsen:HighTemperatureSpring a onsen:TemperatureClass ;
+    rdfs:label "高温泉"@ja ;
+    onsen:minTemperature 42.0 .
+
+# --- 液性区分の個体 -------------------------------------------------
+onsen:Acidic a onsen:LiquidityClass ;
+    rdfs:label "酸性"@ja ;
+    onsen:maxPH 3.0 .
+
+onsen:WeaklyAcidic a onsen:LiquidityClass ;
+    rdfs:label "弱酸性"@ja ;
+    onsen:minPH 3.0 ;
+    onsen:maxPH 6.0 .
+
+onsen:Neutral a onsen:LiquidityClass ;
+    rdfs:label "中性"@ja ;
+    onsen:minPH 6.0 ;
+    onsen:maxPH 7.5 .
+
+onsen:WeaklyAlkaline a onsen:LiquidityClass ;
+    rdfs:label "弱アルカリ性"@ja ;
+    onsen:minPH 7.5 ;
+    onsen:maxPH 8.5 .
+
+onsen:Alkaline a onsen:LiquidityClass ;
+    rdfs:label "アルカリ性"@ja ;
+    onsen:minPH 8.5 .
+
+# --- 浸透圧区分の個体 -----------------------------------------------
+onsen:Hypotonic a onsen:OsmoticPressureClass ;
+    rdfs:label "低張性"@ja ;
+    onsen:maxDissolvedSolids 8000.0 .
+
+onsen:Isotonic a onsen:OsmoticPressureClass ;
+    rdfs:label "等張性"@ja ;
+    onsen:minDissolvedSolids 8000.0 ;
+    onsen:maxDissolvedSolids 10000.0 .
+
+onsen:Hypertonic a onsen:OsmoticPressureClass ;
+    rdfs:label "高張性"@ja ;
+    onsen:minDissolvedSolids 10000.0 .
+
+# --- 区分の境界値プロパティ ------------------------------------------
+onsen:minTemperature a owl:DatatypeProperty ; rdfs:label "下限泉温(℃)"@ja ; rdfs:range xsd:decimal .
+onsen:maxTemperature a owl:DatatypeProperty ; rdfs:label "上限泉温(℃)"@ja ; rdfs:range xsd:decimal .
+onsen:minPH a owl:DatatypeProperty ; rdfs:label "下限pH"@ja ; rdfs:range xsd:decimal .
+onsen:maxPH a owl:DatatypeProperty ; rdfs:label "上限pH"@ja ; rdfs:range xsd:decimal .
+onsen:minDissolvedSolids a owl:DatatypeProperty ; rdfs:label "下限溶存物質(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:maxDissolvedSolids a owl:DatatypeProperty ; rdfs:label "上限溶存物質(mg/kg)"@ja ; rdfs:range xsd:decimal .
+
+#################################################################
+#    4. 成分値と測定メタデータ
+#################################################################
+
+onsen:pH a owl:DatatypeProperty ;
+    rdfs:label "pH"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "液性区分の判定には湧出時（現地）のpH値を用いる。"@ja .
+
+onsen:sourceTemperature a owl:DatatypeProperty ;
+    rdfs:label "源泉温度(℃)"@ja ;
+    rdfs:domain onsen:SpringSource ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "鉱泉が地上に湧出したとき、または採取したときの温度（泉温）。"@ja .
+
+onsen:bathTemperature a owl:DatatypeProperty ;
+    rdfs:label "浴槽温度(℃)"@ja ;
+    rdfs:domain onsen:Bath ;
+    rdfs:range xsd:decimal .
+
+onsen:dissolvedSolids a owl:DatatypeProperty ;
+    rdfs:label "溶存物質(ガス性のものを除く)(mg/kg)"@ja ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "ガス性のもの（遊離二酸化炭素・遊離硫化水素）を含めてはならない。蒸発残留物の値で代用しないこと。"@ja .
+
+onsen:freeCarbonDioxide a owl:DatatypeProperty ; rdfs:label "遊離二酸化炭素(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:totalSulfur a owl:DatatypeProperty ; rdfs:label "総硫黄(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:totalIron a owl:DatatypeProperty ; rdfs:label "総鉄イオン(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:hydrogenIon a owl:DatatypeProperty ; rdfs:label "水素イオン(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:iodideIon a owl:DatatypeProperty ; rdfs:label "よう化物イオン(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:bicarbonateIon a owl:DatatypeProperty ; rdfs:label "炭酸水素イオン(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:sodiumIon a owl:DatatypeProperty ; rdfs:label "ナトリウムイオン(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:potassiumIon a owl:DatatypeProperty ; rdfs:label "カリウムイオン(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:magnesiumIon a owl:DatatypeProperty ; rdfs:label "マグネシウムイオン(mg/kg)"@ja ; rdfs:range xsd:decimal .
+onsen:radon a owl:DatatypeProperty ;
+    rdfs:label "ラドン(マッヘ単位)"@ja ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "IM泉効計または液体シンチレーションカウンタで測定し、方法を分析書に明記する。規定値は放射能濃度。"@ja .
+
+onsen:flowRate a owl:DatatypeProperty ;
+    rdfs:label "湧出量(L/min)"@ja ;
+    rdfs:range xsd:decimal .
+
+onsen:MeasurementPoint a owl:Class ;
+    rdfs:label "測定地点"@ja ;
+    rdfs:comment """掲示内容は利用施設における分析結果に基づくのを原則とするが、
+ゆう出口と利用施設で成分に差異がないと認められる場合はゆう出口の値でもよい。
+源泉の分析結果に基づき適応症を判断した場合はその旨を利用者に分かるようにする必要があるため、
+測定地点を明示的に記録する。"""@ja ;
+    onsen:legalBasis "掲示基準 4.留意事項" .
+
+onsen:AtSourceOutlet a onsen:MeasurementPoint ; rdfs:label "ゆう出口（源泉）"@ja .
+onsen:AtFacility a onsen:MeasurementPoint ; rdfs:label "利用施設"@ja .
+
+onsen:measurementPoint a owl:ObjectProperty ;
+    rdfs:label "測定地点"@ja ;
+    rdfs:range onsen:MeasurementPoint .
+
+onsen:analysisDate a owl:DatatypeProperty ;
+    rdfs:label "分析年月日"@ja ;
+    rdfs:range xsd:date ;
+    rdfs:comment "温泉成分分析は前回分析日から10年以内に受け直す必要がある（温泉法施行令第1条）。"@ja ;
+    onsen:legalBasis "温泉法施行規則第10条第1項第5号" .
+
+onsen:analysisInstitution a owl:DatatypeProperty ;
+    rdfs:label "登録分析機関"@ja ;
+    rdfs:range xsd:string ;
+    onsen:legalBasis "温泉法施行規則第10条第1項第6号" .
+
+onsen:dilutionRatio a owl:DatatypeProperty ;
+    rdfs:label "源泉比率"@ja ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "浴槽中の源泉の割合（1.0 = 源泉100%）。玉川温泉の源泉100%浴槽／50%浴槽のように使う。"@ja .
+
+onsen:isArtificiallyProduced a owl:DatatypeProperty ;
+    rdfs:label "造成泉"@ja ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment "噴気（蒸気）と温泉用水を混合して製造された温泉（例: 箱根大涌谷）。"@ja .
+
+#################################################################
+#    5. 湯使い（法定5類型）
+#################################################################
+
+onsen:WaterTreatment a owl:Class ;
+    rdfs:label "湯使い類型"@ja ;
+    rdfs:comment """温泉法施行規則第10条第2項が掲示を義務づける湯使いの類型。
+「その旨」だけでなく「その理由」の掲示も義務であることが、モデル化上の要点。"""@ja ;
+    onsen:legalBasis "温泉法施行規則第10条第2項" .
+
+onsen:AddingWater a onsen:WaterTreatment ; rdfs:label "加水"@ja ;
+    onsen:legalBasis "温泉法施行規則第10条第2項第1号" .
+onsen:Heating a onsen:WaterTreatment ; rdfs:label "加温"@ja ;
+    onsen:legalBasis "温泉法施行規則第10条第2項第2号" .
+onsen:Recirculation a onsen:WaterTreatment ; rdfs:label "循環（ろ過）"@ja ;
+    onsen:legalBasis "温泉法施行規則第10条第2項第3号" .
+onsen:BathAdditive a onsen:WaterTreatment ; rdfs:label "入浴剤添加"@ja ;
+    onsen:legalBasis "温泉法施行規則第10条第2項第4号" .
+onsen:Disinfection a onsen:WaterTreatment ; rdfs:label "消毒"@ja ;
+    onsen:legalBasis "温泉法施行規則第10条第2項第4号" .
+
+onsen:TreatmentDeclaration a owl:Class ;
+    rdfs:label "湯使い宣言"@ja ;
+    rdfs:comment """施設が掲示する湯使い1件分を表す中間ノード。
+treatmentType（類型）、isApplied（実施の有無）、reason（理由）の3点で構成する。
+単一のboolean（例: isKakenagashi）では「その旨及びその理由」という法定要件を表現できず、
+かつ有馬温泉 金の湯のように「放流式（かけ流し）でありながら加水・加温・塩素消毒を実施」する
+実在ケースを誤って排除してしまう。"""@ja .
+
+onsen:declaresTreatment a owl:ObjectProperty ;
+    rdfs:label "湯使い宣言"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range onsen:TreatmentDeclaration .
+
+onsen:treatmentType a owl:ObjectProperty ;
+    rdfs:label "湯使い類型"@ja ;
+    rdfs:domain onsen:TreatmentDeclaration ;
+    rdfs:range onsen:WaterTreatment .
+
+onsen:isApplied a owl:DatatypeProperty ;
+    rdfs:label "実施の有無"@ja ;
+    rdfs:domain onsen:TreatmentDeclaration ;
+    rdfs:range xsd:boolean .
+
+onsen:reason a owl:DatatypeProperty ;
+    rdfs:label "理由"@ja ;
+    rdfs:domain onsen:TreatmentDeclaration ;
+    rdfs:range xsd:string ;
+    rdfs:comment "掲示が義務づけられている「その理由」。"@ja .
+
+onsen:claimsKakenagashi a owl:DatatypeProperty ;
+    rdfs:label "源泉かけ流しを自主表示"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment """「源泉かけ流し」は法令上の定義が存在しない自主的な広告表示である
+（施行規則第10条第2項が定めるのは加水・加温・循環ろ過・入浴剤・消毒の5類型のみ）。
+したがってこのプロパティは「事業者がそう称している」という事実のみを表し、
+湯の無加工性を意味しない。検証可能な性質は isUnmodifiedSupply（推論で導出）を使う。"""@ja .
+
+onsen:isUnmodifiedSupply a owl:DatatypeProperty ;
+    rdfs:label "無加工供給（推論値）"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment """加水・循環ろ過・消毒・入浴剤添加のいずれも実施していないと宣言されていることから
+推論で導出される派生属性。手で書かない。加温の有無は含めない
+（白骨温泉 泡の湯のように源泉がぬるいため加温する例があり、加温を否定条件に入れると
+低温泉の無加工供給を表現できなくなるため）。"""@ja .
+
+#################################################################
+#    6. 適応症・禁忌症
+#################################################################
+
+onsen:HealthCondition a owl:Class ;
+    rdfs:label "症状・病態"@ja ;
+    rdfs:comment "適応症・禁忌症として掲示基準に列挙される症状または病態。"@ja .
+
+onsen:colloquialExpression a owl:DatatypeProperty ;
+    rdfs:label "口語表現"@ja ;
+    rdfs:domain onsen:HealthCondition ;
+    rdfs:range xsd:string ;
+    rdfs:comment """利用者が使う口語から掲示基準の用語へ橋渡しするための表現。部分一致で判定する前提で、
+「肌荒れ」ではなく「肌」「荒れ」「ガサガサ」のように細かい単位で列挙する。"""@ja ;
+    onsen:heuristicRule """法令に根拠はない。掲示基準の適応症は「皮膚乾燥症」「末梢循環障害」のような硬い用語で書かれており、
+利用者の言葉との対応づけは本オントロジー独自の判断である。LLM に変換させず宣言として持つのは、
+対応の根拠を後から人がレビューでき、テストで固定できるようにするため。""" .
+
+onsen:nonStandardParaphrase a owl:DatatypeProperty ;
+    rdfs:label "条文表記でない言い換え"@ja ;
+    rdfs:domain onsen:HealthCondition ;
+    rdfs:range xsd:string ;
+    rdfs:comment """掲示基準の条文表記の代わりに使われがちな要約語。意味は近いが掲示基準の表記ではない。
+回答の検算（verify.py）で「条文の表記に直せ」と指摘するために使う。口語表現（colloquialExpression）とは役割が違う。
+口語は利用者の言葉なので回答で復唱してよいが、こちらは条文を要約してしまった表記である。"""@ja ;
+    onsen:heuristicRule """法令に根拠はない。どの要約語がどの条文表記に対応するかは本オントロジー独自の判断であり、
+LLM の実際の出力（「病気の活動期（特に熱のあるとき）」を「急性疾患」「高熱」と要約した例など）を見て列挙している。""" .
+
+#################################################################
+#    6b. 相談の意図（エージェントが呼ぶべきツールの対応づけ）
+#################################################################
+
+onsen:ConsultIntent a owl:Class ;
+    rdfs:label "相談の意図"@ja ;
+    rdfs:comment """利用者の相談文から読み取る意図の種類。呼ぶべきツールと対応づけておき、
+回答の検算で「言わなかったこと」＝呼ぶべきツールを呼んでいないことを検出するために使う。
+個体は onsen_heuristics.ttl にある。"""@ja ;
+    onsen:heuristicRule """相談文のどの語がどの意図を示すかは法令とは無関係な本オントロジーの判断である。
+ただし各意図が参照する制約（巡浴の入浴回数・時間、飲用の方法及び注意など）は掲示基準に根拠がある。
+根拠のある制約と、それを引くべきだと判断する手掛かりは別物として扱う。""" .
+
+onsen:intentKeyword a owl:DatatypeProperty ;
+    rdfs:label "意図を示す語"@ja ;
+    rdfs:domain onsen:ConsultIntent ;
+    rdfs:range xsd:string ;
+    rdfs:comment "相談文に対する部分一致で判定する。口語表現と同じく細かい単位で列挙する。"@ja .
+
+onsen:expectedTool a owl:DatatypeProperty ;
+    rdfs:label "呼ぶべきツール"@ja ;
+    rdfs:domain onsen:ConsultIntent ;
+    rdfs:range xsd:string ;
+    rdfs:comment "この意図の相談に対して呼ぶべきツール名。いずれか1つでも呼ばれていれば満たされたとみなす。"@ja .
+
+onsen:repairTool a owl:DatatypeProperty ;
+    rdfs:label "裏取りに使うツール"@ja ;
+    rdfs:domain onsen:ConsultIntent ;
+    rdfs:range xsd:string ;
+    rdfs:comment """呼ばれていなかったときに検算役が代わりに呼ぶツール。expectedTool は集合なので順序を持てないため、
+どれを代わりに呼ぶかは別のプロパティで明示する。"""@ja .
+
+onsen:findingSeverity a owl:DatatypeProperty ;
+    rdfs:label "指摘の重大度"@ja ;
+    rdfs:domain onsen:ConsultIntent ;
+    rdfs:range xsd:string ;
+    rdfs:comment """検算での重大度。"error" は温泉爺のシステムプロンプトが「必ず」と定めているもの、
+"warning" は引いたほうがよいもの。"""@ja .
+
+onsen:IndicationProfile a owl:Class ;
+    rdfs:label "適応症・禁忌症プロファイル"@ja ;
+    rdfs:comment """泉質に依らず療養泉全般に適用される一般的適応症・一般的禁忌症をまとめるための入れ物。
+泉質別のものは SpringQuality 個体に直接付与する。"""@ja .
+
+onsen:hasBathingIndication a owl:ObjectProperty ;
+    rdfs:label "浴用適応症"@ja ;
+    rdfs:range onsen:HealthCondition ;
+    onsen:legalBasis "掲示基準 3.(1)" .
+
+onsen:hasDrinkingIndication a owl:ObjectProperty ;
+    rdfs:label "飲用適応症"@ja ;
+    rdfs:range onsen:HealthCondition ;
+    onsen:legalBasis "掲示基準 3.(1)" .
+
+onsen:hasBathingContraindication a owl:ObjectProperty ;
+    rdfs:label "浴用禁忌症"@ja ;
+    rdfs:range onsen:HealthCondition ;
+    rdfs:comment "禁忌症は「1回の温泉入浴又は飲用でも有害事象を生ずる危険性がある病気・病態」。"@ja ;
+    onsen:legalBasis "掲示基準 1., 2.(1)" .
+
+onsen:hasDrinkingContraindication a owl:ObjectProperty ;
+    rdfs:label "飲用禁忌症"@ja ;
+    rdfs:range onsen:HealthCondition ;
+    onsen:legalBasis "掲示基準 2.(1)" .
+
+# 施設 → 泉質 → 浴用適応症 の畳み込み
+onsen:facilityHasBathingIndication a owl:ObjectProperty ;
+    rdfs:label "施設の浴用適応症（泉質別・推論値）"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range onsen:HealthCondition ;
+    owl:propertyChainAxiom ( onsen:hasSpringSource onsen:hasQuality onsen:hasBathingIndication ) ;
+    rdfs:comment """hasSpringSource ∘ hasQuality ∘ hasBathingIndication。推論器が導出する。
+ただしこれは「基準上の泉質別適応症」であって、当該施設が実際に掲示している内容とは異なりうる。
+掲示内容は知事の判断に委ねられており、「伝統的適応症」という第3のカテゴリも存在する。"""@ja ;
+    onsen:legalBasis "掲示基準 3.(1)注1・注2、3.⑤" .
+
+onsen:displayedIndication a owl:ObjectProperty ;
+    rdfs:label "実際の掲示適応症"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range onsen:HealthCondition ;
+    rdfs:comment "個別施設が実際に掲示している適応症（実測）。規範である泉質別適応症とは区別する。"@ja .
+
+# --- 含有成分別禁忌症（飲用のみ・算術ルール） ------------------------
+onsen:ComponentContraindicationRule a owl:Class ;
+    rdfs:label "含有成分別禁忌症ルール"@ja ;
+    rdfs:comment """飲用のみに適用される禁忌症ルール。温泉1kg中の当該成分量をAとして
+限界飲用量 = (閾値 / A) × 1000 mL を計算する。
+飲用の1日総量はおよそ200〜500mLまでと定められているため、
+算出値が500mL以上になる場合は禁忌症を掲示することを要しない。"""@ja ;
+    onsen:legalBasis "掲示基準 2.(1)③" .
+
+onsen:componentProperty a owl:ObjectProperty ;
+    rdfs:label "対象成分プロパティ"@ja ;
+    rdfs:domain onsen:ComponentContraindicationRule ;
+    rdfs:comment "このルールが参照する成分のデータプロパティ（例: onsen:sodiumIon）。"@ja .
+
+onsen:thresholdMilligram a owl:DatatypeProperty ;
+    rdfs:label "限界量計算の分子(mg)"@ja ;
+    rdfs:domain onsen:ComponentContraindicationRule ;
+    rdfs:range xsd:decimal .
+
+#################################################################
+#    7. 入浴・飲用プロトコル
+#################################################################
+
+onsen:Protocol a owl:Class ;
+    rdfs:label "利用プロトコル"@ja ;
+    rdfs:comment "掲示基準が定める浴用・飲用の方法及び注意を、機械可読な数値制約として表したもの。"@ja .
+
+onsen:BathingProtocol a owl:Class ;
+    rdfs:subClassOf onsen:Protocol ;
+    rdfs:label "浴用プロトコル"@ja ;
+    onsen:legalBasis "掲示基準 2.(2)①" .
+
+onsen:DrinkingProtocol a owl:Class ;
+    rdfs:subClassOf onsen:Protocol ;
+    rdfs:label "飲用プロトコル"@ja ;
+    onsen:legalBasis "掲示基準 2.(2)②、温泉利用基準 第二" .
+
+onsen:maxBathsPerDayInitial a owl:DatatypeProperty ; rdfs:label "1日入浴回数上限(開始後数日間)"@ja ; rdfs:range xsd:integer .
+onsen:maxBathsPerDayAdapted a owl:DatatypeProperty ; rdfs:label "1日入浴回数上限(慣れた後)"@ja ; rdfs:range xsd:integer .
+onsen:maxMinutesPerBathInitial a owl:DatatypeProperty ; rdfs:label "1回入浴時間上限(初期・分)"@ja ; rdfs:range xsd:integer .
+onsen:maxMinutesPerBathAdapted a owl:DatatypeProperty ; rdfs:label "1回入浴時間上限(慣れた後・分)"@ja ; rdfs:range xsd:integer .
+onsen:restMinutesAfterBath a owl:DatatypeProperty ; rdfs:label "入浴後安静時間(分)"@ja ; rdfs:range xsd:integer .
+onsen:highTemperatureCautionThreshold a owl:DatatypeProperty ; rdfs:label "高温浴注意の閾値(℃)"@ja ; rdfs:range xsd:decimal .
+onsen:onsetDaysMin a owl:DatatypeProperty ; rdfs:label "湯あたり発現時期の下限(日)"@ja ; rdfs:range xsd:integer .
+onsen:onsetDaysMax a owl:DatatypeProperty ; rdfs:label "湯あたり発現時期の上限(日)"@ja ; rdfs:range xsd:integer .
+onsen:drinkingMlPerServingMax a owl:DatatypeProperty ; rdfs:label "1回飲用量上限(mL)"@ja ; rdfs:range xsd:integer .
+onsen:drinkingMlPerDayMax a owl:DatatypeProperty ; rdfs:label "1日飲用総量上限(mL)"@ja ; rdfs:range xsd:integer .
+onsen:minAgeForDrinking a owl:DatatypeProperty ; rdfs:label "飲用可能年齢の下限"@ja ; rdfs:range xsd:integer .
+
+onsen:drinkingPermitted a owl:DatatypeProperty ;
+    rdfs:label "飲用許可"@ja ;
+    rdfs:domain onsen:Facility ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment """温泉法第18条に基づく飲用利用の許可の有無。
+飲用利用許可を取得していない施設には、原則的に飲用の禁忌症・適応症・注意事項を掲示しない。
+泉質に飲用適応症があることは、その温泉を飲んでよいことを意味しない。"""@ja ;
+    onsen:legalBasis "温泉法第18条、掲示基準" .
+
+#################################################################
+#    8. 泉質間の順序関係（湯めぐり推論用）
+#################################################################
+
+onsen:isSkinIrritating a owl:DatatypeProperty ;
+    rdfs:label "皮膚刺激が強い（推論値）"@ja ;
+    rdfs:domain onsen:SpringQuality ;
+    rdfs:range xsd:boolean ;
+    rdfs:comment """掲示基準 2.(2)①エ(ア) が「刺激の強い泉質（例えば酸性泉や硫黄泉等）」と例示し、
+かつ泉質別禁忌症が定められているのが酸性泉と硫黄泉の2泉質のみであることから導出する。
+掲示基準は酸性泉・硫黄泉の浴用禁忌症を「皮膚又は粘膜の過敏な人、高齢者の皮膚乾燥症」と定める。"""@ja ;
+    onsen:legalBasis "掲示基準 2.(2)①エ(ア)、2.(1)② 泉質別禁忌症" .
+
+onsen:recommendedAfter a owl:ObjectProperty ;
+    rdfs:label "仕上げ湯として推奨"@ja ;
+    rdfs:domain onsen:SpringQuality ;
+    rdfs:range onsen:SpringQuality ;
+    rdfs:comment "「X recommendedAfter Y」= 泉質Yに入った後の仕上げの湯として泉質Xが推奨される。"@ja ;
+    onsen:heuristicRule """法令に根拠はない。四万温泉 積善館が「草津の仕上げ湯」として、
+強酸性の草津で湯治した後に保湿・美肌効果のある四万に滞在する慣習を公式に記述していること
+（https://www.sekizenkan.co.jp/spa/）と、塩化物泉・炭酸水素塩泉・硫酸塩泉の
+泉質別適応症に「皮膚乾燥症」が含まれることを支持根拠とする本プロジェクト独自のルール。""" .
+
+onsen:incompatibleWith a owl:ObjectProperty , owl:SymmetricProperty ;
+    rdfs:label "連続利用は非推奨"@ja ;
+    rdfs:domain onsen:SpringQuality ;
+    rdfs:range onsen:SpringQuality ;
+    rdfs:comment "刺激の強い泉質同士を短時間に連続利用することの非推奨関係。対称的関係。"@ja ;
+    onsen:heuristicRule """法令に「はしご湯」の規定は存在しない。掲示基準 2.(2)①エ(ア) が
+酸性泉・硫黄泉等を「刺激の強い泉質」とし、肌の弱い人は温水で洗い流すよう求めていることから
+本プロジェクトが導出した経験的ルール。""" .
+
+#################################################################
+#    9. 巡浴プラン（第2話の主題）
+#################################################################
+
+onsen:BathingItinerary a owl:Class ;
+    rdfs:label "巡浴プラン"@ja ;
+    rdfs:comment """複数の浴場を巡る計画（俗に「はしご湯」「湯めぐり」と呼ばれる）。
+「はしご湯」は一次情報に出現しない俗語であり、公的概念ではない。
+その制約はすべて BathingProtocol の法定数値制約への参照として表現する。"""@ja ;
+    onsen:dataStatus "「はしご湯」「湯めぐり」の公的定義は一次情報（温泉法・施行規則・鉱泉分析法指針・掲示基準・温泉利用基準）に存在しない。" .
+
+onsen:ItineraryStep a owl:Class ;
+    rdfs:label "巡浴ステップ"@ja .
+
+onsen:hasStep a owl:ObjectProperty ;
+    rdfs:label "ステップ"@ja ;
+    rdfs:domain onsen:BathingItinerary ;
+    rdfs:range onsen:ItineraryStep .
+
+onsen:stepOrder a owl:DatatypeProperty ; rdfs:label "順序"@ja ; rdfs:range xsd:integer .
+onsen:stepFacility a owl:ObjectProperty ; rdfs:label "対象施設"@ja ; rdfs:range onsen:Facility .
+onsen:stepMinutes a owl:DatatypeProperty ; rdfs:label "入浴時間(分)"@ja ; rdfs:range xsd:integer .
+
+onsen:Warning a owl:Class ;
+    rdfs:label "警告"@ja ;
+    rdfs:comment "プラン検証で検出された制約違反。"@ja .
+
+onsen:hasWarning a owl:ObjectProperty ; rdfs:label "警告"@ja ; rdfs:range onsen:Warning .
+onsen:warningMessage a owl:DatatypeProperty ; rdfs:label "警告文"@ja ; rdfs:range xsd:string .
+onsen:warningSeverity a owl:DatatypeProperty ;
+    rdfs:label "重大度"@ja ;
+    rdfs:range xsd:string ;
+    rdfs:comment "\"legal\"（法定プロトコル違反）または \"heuristic\"（独自ルールによる助言）。"@ja .
