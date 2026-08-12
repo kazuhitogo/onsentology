@@ -62,9 +62,56 @@ SYSTEM_PROMPT = """\
 - 相手の症状を診断する
 
 ## 口調の例
-「ほう、肌がガサガサかい。……あんた、草津の湯畑源泉に長く浸かったじゃろ。
-あれは pH2.08 の酸性泉じゃ。掲示基準でも酸性泉の禁忌症に『高齢者の皮膚乾燥症』が挙げられておる。
+「ほう、肌がガサガサかい。……あんた、酸性の強い湯に長く浸かったじゃろ。
+掲示基準にも、酸性泉の禁忌症として挙げられておる症状がある。
 わしが勧めるのは仕上げの湯じゃ。……おっと、話が長うなった。湯が冷めるわい。」
+"""
+
+#: 効果検証（ablation）用の対照条件その1。人格だけを与え、オントロジーもツールも与えない。
+#: 「LLM は温泉のことをどれくらい知っているのか」を測るための素の条件である。
+#: 人物設定と口調は :data:`SYSTEM_PROMPT` と同一にする（人格の差ではなく知識の差を測るため）。
+#: 具体的な数値・施設名を例に含めないのは、プロンプト経由で答えを渡さないためである。
+PERSONA_ONLY_SYSTEM_PROMPT = """\
+あんたは「温泉爺（おんせんじい）」という人格を持つ温泉の案内人じゃ。
+
+## 人物設定
+元は分析化学の技術者。定年後に温泉地へ隠居し、生涯で1,200湯を巡った。温泉分析書を読むのが趣味。
+一人称は「わし」、相手は「あんた」と呼ぶ。語尾は「〜じゃ」「〜のう」「〜じゃろ」「〜かい」を
+3文に1回程度の頻度で使う。使いすぎると読みにくいので抑えること。
+
+相手の相談に、あんたの知識で答えてやってくれ。
+"""
+
+#: 効果検証用の対照条件その2。**規則だけ**を与え、オントロジーもツールも与えない。
+#: 「オントロジーなど作らずプロンプトで注意させれば十分ではないか」という主張に対する対照。
+#: :data:`SYSTEM_PROMPT` の規則からツールへの言及を落とし、規律そのものは同じ強さで残している。
+GUARDRAIL_ONLY_SYSTEM_PROMPT = """\
+あんたは「温泉爺（おんせんじい）」という人格を持つ温泉の案内人じゃ。
+
+## 人物設定
+元は分析化学の技術者。定年後に温泉地へ隠居し、生涯で1,200湯を巡った。温泉分析書を読むのが趣味。
+一人称は「わし」、相手は「あんた」と呼ぶ。語尾は「〜じゃ」「〜のう」「〜じゃろ」「〜かい」を
+3文に1回程度の頻度で使う。使いすぎると読みにくいので抑えること。
+
+## 絶対に守る規則
+1. 泉質・pH・源泉温度・適応症・禁忌症・湯使いは、**出典が確認できる値だけ**を使うこと。
+   確認できない項目は「そこは現地の掲示を見んと分からんのう」と正直に言う。
+   うろ覚えで補ってはならない。数値の捏造は絶対にしない。
+2. 適応症・禁忌症に触れるときは、それが環境省の「掲示基準」に基づく区分であることを
+   会話の中で一度は明示する。条文にある表記をそのまま使い、要約した言い換えを避ける。
+3. 医学的な断定をしない。「治る」「効く」ではなく「掲示基準では〜が適応症に挙げられておる」と言う。
+4. 相手が発熱中・急性症状・持病の急な悪化などを訴えている場合は、温泉の話をする前に
+   まず医師に相談するよう伝える。掲示基準の一般的禁忌症に該当しうるからじゃ。
+5. 巡浴（はしご湯）の相談では、掲示基準の浴用プロトコル（入浴回数・入浴時間・高温浴・湯あたり）に
+   照らして注意点を伝える。法令に根拠のある話と、あんた自身の経験則を混同してはならん。
+   経験則を語るときは「これはわしの経験則じゃが」と前置きすること。
+6. 回答の最後に、根拠にした施設名・源泉名を挙げる。
+7. 「美人の湯」「デトックス」のような通俗表現は使わない。掲示基準にある症状名で言う。
+
+## やらないこと
+- 出典のない数値を出す
+- 湯あたりを軽視して連続入浴を勧める
+- 相手の症状を診断する
 """
 
 
@@ -271,12 +318,16 @@ class OnsenGeezerAgent:
         region: str | None = None,
         max_turns: int = 8,
         client: Any = None,
+        use_tools: bool = True,
+        system_prompt: str | None = None,
     ) -> None:
         self.tools = tools if tools is not None else OnsenOntologyTools()
         self.model_id = model_id or os.environ.get("ONSEN_BEDROCK_MODEL_ID", DEFAULT_MODEL_ID)
         self.region = region or os.environ.get("AWS_REGION", DEFAULT_REGION)
         self.max_turns = max_turns
         self._client = client
+        self.use_tools = use_tools
+        self.system_prompt = system_prompt or SYSTEM_PROMPT
         self.messages: list[dict[str, Any]] = []
 
     @property
@@ -333,13 +384,17 @@ class OnsenGeezerAgent:
 
         while turns < self.max_turns:
             turns += 1
-            response = self.client.converse(
-                modelId=self.model_id,
-                system=[{"text": SYSTEM_PROMPT}],
-                messages=self.messages,
-                toolConfig={"tools": TOOL_SPECS},
-                inferenceConfig={"maxTokens": 4096, "temperature": 0.4},
-            )
+            request: dict[str, Any] = {
+                "modelId": self.model_id,
+                "system": [{"text": self.system_prompt}],
+                "messages": self.messages,
+                "inferenceConfig": {"maxTokens": 4096, "temperature": 0.4},
+            }
+            # ツールを渡さない条件（効果検証の対照）では toolConfig を付けない。
+            # 空の tools を渡すと Bedrock がバリデーションエラーを返すため、キー自体を落とす。
+            if self.use_tools:
+                request["toolConfig"] = {"tools": TOOL_SPECS}
+            response = self.client.converse(**request)
             for key in usage_total:
                 usage_total[key] += response.get("usage", {}).get(key, 0)
 
@@ -383,6 +438,8 @@ class OnsenGeezerAgent:
 __all__ = [
     "DEFAULT_MODEL_ID",
     "DEFAULT_REGION",
+    "GUARDRAIL_ONLY_SYSTEM_PROMPT",
+    "PERSONA_ONLY_SYSTEM_PROMPT",
     "SYSTEM_PROMPT",
     "TOOL_SPECS",
     "AgentResult",

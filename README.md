@@ -81,12 +81,15 @@ export ONSEN_BEDROCK_MODEL_ID='arn:aws:bedrock:ap-northeast-1:<account-id>:appli
 | `onsen plan [--area X] [--facilities A B C]` | 巡浴プランの生成・検証 |
 | `onsen ask <相談>` | 温泉爺エージェントに相談（Bedrock を呼ぶ） |
 | `onsen consult [相談...]` | 湯治コンシェルジュとして複数ターン相談（対話モードあり） |
+| `onsen eval` | オントロジーの効果検証（ablation）を実行・集計 |
 
 `onsen plan` の主なオプション: `--adapted`（温泉に慣れている）、`--minutes`、`--gap`、`--days`（連続療養日数）、`--high-temp-caution`、`--max-baths`。
 
 `onsen ask` の主なオプション: `--show-tools`（ツール呼び出しを表示）、`--revise`（検算の指摘を差し戻して書き直させる）、`--no-verify`（検算しない）。
 
 `onsen consult` の主なオプション: `--no-repair`（未出典の語を自動で裏取りしない）、`--no-carry-over`（指摘を次ターンに申し送らない）。
+
+`onsen eval` の主なオプション: `--dry-run`（呼び出し計画だけ表示）、`--conditions`／`--questions`（条件・問を絞る）、`--report`（保存済み JSONL を集計、複数指定で合算）。
 
 ---
 
@@ -109,6 +112,7 @@ src/onsen_ontology/
 ├── agent.py         Bedrock Converse API による温泉爺エージェント
 ├── verify.py        回答の検算（ツール戻り値との照合）
 ├── consult.py       相談セッション（申し送り・自動裏取り）
+├── ablation.py      効果検証（4条件×8問の比較と採点）
 └── cli.py           CLI
 
 docs/
@@ -207,10 +211,39 @@ $ uv run onsen ask "草津の湯は美肌にええと聞いたが、効能を教
 
 ---
 
+## オントロジーの効果検証
+
+「オントロジーを作った意味はあったのか」を測るため、同じ相談を4条件に投げて同じ計器で採点する ablation を用意した（`src/onsen_ontology/ablation.py`）。
+
+```bash
+uv run onsen eval --dry-run                        # 呼び出し計画を確認
+AWS_PROFILE=dev-vm uv run onsen eval               # 4条件 × 8問（32回の Bedrock 呼び出し）
+uv run onsen eval --report .cache/ablation-*.jsonl # 保存済みの結果を合算して集計
+```
+
+| 条件 | 内容 | 事実チェック合格率 | 検算の指摘 | 平均トークン | 平均レイテンシ |
+|---|---|---|---|---|---|
+| A | 素の LLM（人格プロンプトのみ） | 31.6%（18/57） | 55件 | 602 | 3.9秒 |
+| A+ | プロンプトだけ厳しくした LLM | 49.1%（28/57） | 49件 | 1,177 | 4.0秒 |
+| B | オントロジーのツールあり | 75.4%（43/57） | 25件 | 16,138 | 6.3秒 |
+| C | ツールあり＋検算の差し戻し | **82.5%**（47/57） | **6件** | 22,140 | 8.0秒 |
+
+8問 × 4条件 × 3回（計96サンプル）の実測値。モデルは既定の `jp.anthropic.claude-sonnet-4-6`、温度0.4。
+
+- **事実チェック**は一次情報から書き起こした期待／禁止条件（`Check`）で、各条件に根拠となる条文・公表値を必ず持たせている
+- **検算**は `verify.py` をそのまま流用する。A・A+ はツール戻り値が空なので数値・語彙は定義上すべて「出典なし」に倒れる。条件間で比較できるのは事実チェックの合否であり、指摘件数は分布として読む
+- 効いたのは「事実の粒度（源泉ごとに違う pH）」「欠損（収録していない温泉地を知らないと言えるか）」「法定の数量（pH3未満は薄めて1回100mLまで）」の3か所。逆に**口調と規律はプロンプトだけで半分改善する**
+- ツールを与えるだけでは通俗表現が止まらない（B は「美肌・デトックス」の問で3回とも不合格）。検算の差し戻しがそこを埋めた
+- 代償はトークン約37倍・レイテンシ2倍、そして答えられる範囲が15温泉地に限られること
+
+問の設計・採点条件・集計は `tests/test_ablation.py` で固定している（合成回答で満点・不合格の両方を確認）。
+
+---
+
 ## テスト
 
 ```bash
-uv run pytest              # 120 passed, 1 skipped
+uv run pytest              # 132 passed, 1 skipped
 uv run ruff check .
 ```
 

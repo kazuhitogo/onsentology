@@ -184,6 +184,67 @@ def cmd_consult(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_eval(args: argparse.Namespace) -> int:
+    """オントロジーの効果検証（ablation）を実行する、または保存済みの結果を集計する。"""
+    from pathlib import Path
+
+    from . import ablation
+    from .agent import OnsenOntologyTools
+
+    if args.report:
+        records: list[ablation.Record] = []
+        for path in args.report:
+            records += ablation.read_jsonl(Path(path))
+        _print(
+            {
+                "件数": len(records),
+                "実行ファイル数": len(args.report),
+                "条件ごとの集計": ablation.summarize(records),
+                "問ごとの事実チェック": ablation.per_question_table(records),
+            }
+        )
+        return 0
+
+    conditions = [c for c in ablation.CONDITIONS if not args.conditions or c.id in args.conditions]
+    questions = [q for q in ablation.QUESTIONS if not args.questions or q.id in args.questions]
+    if not conditions or not questions:
+        print("条件または問が空である", file=sys.stderr)
+        return 1
+
+    if args.dry_run:
+        _print(
+            {
+                "呼び出し回数（差し戻しを除く）": len(conditions) * len(questions),
+                "条件": [
+                    {"id": c.id, "内容": c.label, "ツール": c.use_tools, "差し戻し": c.revise}
+                    for c in conditions
+                ],
+                "問": [
+                    {"id": q.id, "軸": q.axis, "相談": q.text, "検査数": len(q.checks)}
+                    for q in questions
+                ],
+            }
+        )
+        return 0
+
+    records = ablation.run_ablation(
+        conditions=conditions,
+        questions=questions,
+        tools=OnsenOntologyTools(load_inferred_graph()),
+        progress=True,
+    )
+    out = Path(args.out) if args.out else ablation.default_output_path()
+    ablation.write_jsonl(records, out)
+    print(f"結果を保存した: {out}", file=sys.stderr)
+    _print(
+        {
+            "条件ごとの集計": ablation.summarize(records),
+            "問ごとの事実チェック": ablation.per_question_table(records),
+        }
+    )
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="onsen",
@@ -252,6 +313,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--no-carry-over", action="store_true", help="指摘の申し送りを次ターンに渡さない")
     p.set_defaults(func=cmd_consult)
+
+    p = sub.add_parser(
+        "eval",
+        help="オントロジーの効果検証（ablation）を実行する（Bedrock を呼ぶ）",
+    )
+    p.add_argument(
+        "--conditions",
+        nargs="*",
+        metavar="ID",
+        help="実行する条件。既定は全部（A: 素のLLM / A+: 規則のみ / B: ツールあり / C: 検算の差し戻し）",
+    )
+    p.add_argument("--questions", nargs="*", metavar="ID", help="実行する問。既定は全部（Q1〜Q8）")
+    p.add_argument("--out", help="結果の JSONL 出力先。既定は .cache/ablation-<時刻>.jsonl")
+    p.add_argument(
+        "--report",
+        nargs="+",
+        metavar="PATH",
+        help="保存済みの JSONL を集計するだけ（Bedrock を呼ばない）。複数指定すると合算する",
+    )
+    p.add_argument("--dry-run", action="store_true", help="呼び出し計画を表示するだけ")
+    p.set_defaults(func=cmd_eval)
 
     return parser
 
