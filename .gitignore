@@ -24,3 +24,12 @@ articles/
 HANDOVER.md
 HISTORY.md
 PLAN.md
+
+# 効果検証の実測結果（Bedrock を実際に呼んだ記録。再取得には課金と30分かかる）
+# .cache は推論キャッシュを捨てるために rm -rf することがあるので、別ディレクトリに置く。
+eval-results/
+
+# onsen graph の出力（図はリポジトリに置かない）
+*.png
+*.svg
+*.dot
