@@ -235,11 +235,16 @@ TOOL_SPECS: list[dict[str, Any]] = [
 
 @dataclass
 class ToolCallLog:
-    """ツール呼び出しの記録。回答の検証に使う。"""
+    """ツール呼び出しの記録。回答の検証に使う。
+
+    :param turn: 何ターン目の呼び出しか。1ターンで複数のツールを並べて呼ぶことがあるので、
+        呼び出しの順序だけでは「同時に決めたのか、前の結果を見て決めたのか」が区別できない。
+    """
 
     name: str
     input: dict[str, Any]
     output: Any
+    turn: int = 0
 
 
 class OnsenOntologyTools:
@@ -413,7 +418,12 @@ class OnsenGeezerAgent:
             for use in tool_uses:
                 output = self.tools.call(use["name"], use.get("input") or {})
                 logs.append(
-                    ToolCallLog(name=use["name"], input=use.get("input") or {}, output=output)
+                    ToolCallLog(
+                        name=use["name"],
+                        input=use.get("input") or {},
+                        output=output,
+                        turn=turns,
+                    )
                 )
                 tool_results.append(
                     {
