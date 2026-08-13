@@ -56,14 +56,57 @@ onsen:StressRelatedSymptoms onsen:colloquialExpression "ストレス" , "眠れ"
 onsen:ActiveDiseasePhase onsen:nonStandardParaphrase "急性疾患" , "高熱" , "発熱中の病気" .
 onsen:PeripheralCirculationDisorder onsen:nonStandardParaphrase "血行不良" .
 onsen:Convalescence onsen:nonStandardParaphrase "病み上がり" .
-onsen:ChronicPainOrStiffness onsen:nonStandardParaphrase "関節痛" , "筋肉痛" .
+onsen:ChronicPainOrStiffness onsen:nonStandardParaphrase "関節痛" , "筋肉痛" , "ねんざ" .
 onsen:SevereHeartOrLungDisease onsen:nonStandardParaphrase "重い心臓病" , "心疾患" .
 onsen:SevereDebilitation onsen:nonStandardParaphrase "身体が衰弱している人" .
 onsen:AcuteExacerbation onsen:nonStandardParaphrase "急性増悪" .
 onsen:DrySkin onsen:nonStandardParaphrase "乾燥肌" , "肌の乾燥" .
 
-# --- 相談の意図 → 呼ぶべきツール ------------------------------------
-# 「言わなかったこと」の検査に使う。巡浴を頼まれて plan_itinerary を呼ばず
+# --- 現行の掲示基準に無い効能表記（コーパス汚染の検出用） -------------
+# 温泉施設・観光協会の公式ページに現に載っている表記のうち、現行の掲示基準（平成26年改訂）の
+# 適応症一覧に無いもの。生テキストを検索させると「出典あり」として通ってしまうため、
+# 法定知識の側から判定するための表として持つ。
+#
+# 「改訂前の基準にあった表記である」とは主張しない（旧基準の一次情報を確認できていない）。
+# 主張するのは「現行の掲示基準の適応症一覧に無い」ことだけで、これは onsen_knowledge.ttl に
+# 対して機械的に検査できる（tests/test_ontology.py）。
+#
+# 逆に「五十肩」「打撲」「捻挫」「運動麻痺」「冷え性」「神経痛」「病後回復期」は
+# 現行の条文にそのまま現れるので、ここには入れない。
+
+oid:nsi-jakujaku-jido a onsen:NonStatutoryIndication ;
+    rdfs:label "虚弱児童"@ja ;
+    rdfs:comment "有馬温泉 金の湯・酸ヶ湯・ひょうたん温泉などの公表ページに現れる。現行の適応症一覧に無い。"@ja .
+
+oid:nsi-mansei-fujinbyo a onsen:NonStatutoryIndication ;
+    rdfs:label "慢性婦人病"@ja ;
+    rdfs:comment "8件の施設ページに現れる。現行の掲示基準に対応する適応症名は無い。"@ja .
+
+oid:nsi-uchimi a onsen:NonStatutoryIndication ;
+    rdfs:label "うちみ"@ja ;
+    rdfs:comment "現行の条文表記は「打撲」（筋肉若しくは関節の慢性的な痛み又はこわばりの例示）。"@ja .
+
+oid:nsi-kujiki a onsen:NonStatutoryIndication ;
+    rdfs:label "くじき"@ja ;
+    rdfs:comment "現行の条文表記は「捻挫」（同上）。"@ja .
+
+oid:nsi-shishitsu a onsen:NonStatutoryIndication ;
+    rdfs:label "痔疾"@ja ;
+    rdfs:comment "現行の一般的適応症は「痔の痛み」。"@ja .
+
+oid:nsi-yakedo a onsen:NonStatutoryIndication ;
+    rdfs:label "やけど"@ja ;
+    rdfs:comment "コーパスの12文書に現れる。現行の泉質別適応症は「きりきず」までで、やけどは無い。"@ja .
+
+oid:nsi-mansei-shokakibyo a onsen:NonStatutoryIndication ;
+    rdfs:label "慢性消化器病"@ja ;
+    rdfs:comment "現行の一般的適応症は「胃腸機能の低下」。"@ja .
+
+oid:nsi-mansei-hifubyo a onsen:NonStatutoryIndication ;
+    rdfs:label "慢性皮膚病"@ja ;
+    rdfs:comment "現行の泉質別適応症は「慢性湿疹」「アトピー性皮膚炎」など個別の病名で書かれている。"@ja .
+
+# --- 相談の意図 → 呼ぶべきツール ------------------------------------# 「言わなかったこと」の検査に使う。巡浴を頼まれて plan_itinerary を呼ばず
 # 一般論だけ述べる回答は、値の照合には引っかからないまま規則5に反する。
 
 oid:intent-itinerary a onsen:ConsultIntent ;

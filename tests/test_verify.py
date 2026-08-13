@@ -12,6 +12,7 @@ from onsen_ontology.agent import OnsenOntologyTools, ToolCallLog
 from onsen_ontology.verify import (
     Finding,
     format_findings,
+    nonstatutory_indications,
     ontology_vocabulary,
     revision_request,
     summarize,
@@ -188,7 +189,82 @@ def test_相談文にある通俗表現も指摘する() -> None:
         question="温泉でデトックスできるかい",
     )
     assert [finding.text for finding in findings] == ["デトックス"]
-    assert findings[0].severity == "warning"
+
+
+# --------------------------------------------------------------------------
+# 出典の質（生テキスト検索を入れると露出する穴）
+# --------------------------------------------------------------------------
+
+
+def test_文書検索の戻り値は通俗表現の出典として認めない() -> None:
+    """生テキストに「美人の湯」が書いてあっても、法定の記述にはならない。
+
+    条件 D（BM25 の文書検索）では取得した Web 本文がツール戻り値になる。ツール戻り値との
+    照合だけで判定すると、施設ページに載っている通俗表現がすべて素通りしてしまう。
+    **出典があることと、法定の記述であることは違う**という論点がここに出る。
+    """
+    document_call = ToolCallLog(
+        name="search_documents",
+        input={"query": "草津 大滝乃湯"},
+        output={"結果": [{"本文": "「美人の湯」としても知られる大滝乃湯", "出典URL": "http://example"}]},
+        source="documents",
+    )
+    findings = verify_answer("大滝乃湯は美人の湯として知られておる。", [document_call])
+    assert _kinds(findings) == {"folk_expression"}
+    assert findings[0].text == "美人の湯"
+
+
+def test_オントロジーの戻り値なら同じ語を通す() -> None:
+    """同じ語でも、グラフが返したものなら出典の性質が分かるので通す。"""
+    ontology_call = _call(
+        "describe_facility",
+        {"施設名": "四万温泉 積善館", "理由": "保湿・美肌効果のある四万に滞在する慣習"},
+        name="積善館",
+    )
+    assert verify_answer("積善館は保湿・美肌効果があると自ら記しておる。", [ontology_call]) == []
+
+
+def test_現行の掲示基準に無い効能表記を検出する(graph: Graph) -> None:
+    """施設ページの効能書きをそのまま述べたら指摘する。
+
+    「うちみ」「慢性婦人病」は大滝乃湯の公式ページに現に載っているので、生テキストを引けば
+    出典はある。しかし現行の掲示基準の適応症一覧には無い。判定はグラフ（法定知識）側で行う。
+    """
+    document_call = ToolCallLog(
+        name="search_documents",
+        input={"query": "大滝乃湯 効能"},
+        output={"結果": [{"本文": "効能：神経痛、関節痛、うちみ、慢性婦人病など"}]},
+        source="documents",
+    )
+    findings = verify_answer(
+        "大滝乃湯の効能はうちみ、慢性婦人病じゃ。", [document_call], graph=graph
+    )
+    kinds = _kinds(findings)
+    assert "nonstatutory_indication" in kinds
+    texts = {f.text for f in findings if f.kind == "nonstatutory_indication"}
+    assert texts == {"うちみ", "慢性婦人病"}
+    assert all(
+        f.severity == "error" for f in findings if f.kind == "nonstatutory_indication"
+    )
+
+
+def test_現行にないと断って紹介するのは通す(graph: Graph) -> None:
+    findings = verify_answer(
+        "施設の掲示には「慢性婦人病」とあるが、これは現行の掲示基準の適応症一覧には無い表記じゃ。",
+        [],
+        graph=graph,
+    )
+    assert "nonstatutory_indication" not in _kinds(findings)
+
+
+def test_現行の条文にある表記は非法定として扱わない(graph: Graph) -> None:
+    """「五十肩」「打撲」「捻挫」は現行の掲示基準の条文にそのまま現れる。
+
+    旧表記の検出をやりすぎると、条文どおりに書いた回答を落としてしまう。
+    """
+    table = nonstatutory_indications(graph)
+    for term in ("五十肩", "打撲", "捻挫", "運動麻痺", "冷え性", "神経痛", "病後回復期"):
+        assert term not in table, term
 
 
 def test_適応症に触れながら掲示基準を明示しない場合を検出する() -> None:

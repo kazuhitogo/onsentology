@@ -5,7 +5,7 @@ LLM が組み立てた回答文を、**ツールが実際に返した値**と照
 基づく区分であることを明示する」「法定と経験則を混同しない」と定めているが、
 プロンプトは守られる保証がない。守られたかどうかをオントロジー側から機械的に検査する。
 
-検出するのは4種類。
+検出するのは7種類。
 
 ``unsourced_quantity``
     pH・温度・時間・容量などの**単位付きの数値**が、ツール戻り値にも相談文にも現れない。
@@ -25,10 +25,16 @@ LLM が組み立てた回答文を、**ツールが実際に返した値**と照
     掲示基準の条文表記を要約した言い換え（「病気の活動期（特に熱のあるとき）」→「急性疾患」）。
     対応表はグラフ側の ``onsen:nonStandardParaphrase`` にある。意味は近いので誤りではないが、
     条文の表記ではないため掲示基準の引用として扱えない。
+``nonstatutory_indication``
+    現行の掲示基準の適応症一覧に無い効能表記（「虚弱児童」「慢性婦人病」「うちみ」）。
+    施設の公式ページには現に載っているので、**ツール戻り値との照合では出典ありとして通る**。
+    判定基準を法定知識の側（``onsen_knowledge.ttl``）に置き、表は
+    ``onsen:NonStatutoryIndication`` の個体から読む。
 
 数値と語彙の検査は「ツール戻り値に無い」ことしか見ない。**意味の正しさは検査しない**。
-言い換え（「病気の活動期」→「急性疾患」）は語彙の検査では素通りするので、
-条文表記そのままの使用を強制したい場合は別の手段が必要である。
+出典の**質**も見ない。ここが生テキスト検索（条件 D）を入れると露出する穴で、
+通俗表現・条文の言い換え・非法定の効能表記の3つだけは、ツール戻り値ではなく
+**グラフ（法定知識）を基準に**判定している。
 """
 
 from __future__ import annotations
@@ -101,8 +107,33 @@ _AREA_QUERY = """
 SELECT DISTINCT ?label WHERE { ?s a onsen:OnsenArea ; rdfs:label ?label }
 """
 
+#: 現行の掲示基準に無い効能表記（``onsen:NonStatutoryIndication`` の個体）。
+_NONSTATUTORY_QUERY = """
+SELECT ?label ?comment WHERE {
+    ?s a onsen:NonStatutoryIndication ; rdfs:label ?label .
+    OPTIONAL { ?s rdfs:comment ?comment }
+}
+"""
+
+#: 「現行の掲示基準には無い表記だ」と断っていると認める語。
+_NONSTATUTORY_DISCLAIMERS: tuple[str, ...] = (
+    "現行",
+    "改訂",
+    "掲示基準に無",
+    "掲示基準にな",
+    "掲示基準では",
+    "一覧に無",
+    "一覧にな",
+    "載っておらん",
+    "載っていない",
+    "古い表記",
+    "昔の表記",
+    "旧",
+)
+
 _area_cache: dict[int, tuple[str, ...]] = {}
 _expectation_cache: dict[int, tuple[ConsultExpectation, ...]] = {}
+_nonstatutory_cache: dict[int, dict[str, str]] = {}
 
 _VOCABULARY_CLASSES: tuple[tuple[Any, str, str], ...] = (
     # (クラス, 区分名, 裏を取るツール名)
@@ -188,9 +219,18 @@ def _numbers(text: str) -> set[float]:
     return found
 
 
-def _serialize(tool_calls: list[ToolCallLog]) -> str:
+def _serialize(tool_calls: list[ToolCallLog], *, source: str | None = None) -> str:
+    """ツール呼び出しの入出力を1つの文字列にする。
+
+    ``source`` を渡すとその出所の呼び出しだけを対象にする。生テキスト検索（``documents``）と
+    オントロジー（``ontology``）を分けるためにある。**生テキストに書いてあることと、
+    法定の記述であることは違う**ので、通俗表現・条文の言い換えの判定には
+    オントロジー側の戻り値だけを使う。
+    """
     parts = []
     for call in tool_calls:
+        if source is not None and getattr(call, "source", "ontology") != source:
+            continue
         parts.append(json.dumps(call.input, ensure_ascii=False, default=str))
         parts.append(json.dumps(call.output, ensure_ascii=False, default=str))
     return "\n".join(parts)
@@ -265,22 +305,76 @@ def _check_terms(
     return findings
 
 
-def _check_folk_expressions(answer: str, tool_text: str) -> list[Finding]:
-    """通俗表現を検出する。ツール戻り値に同じ語があれば出典ありとして通す。
+def _check_folk_expressions(answer: str, ontology_text: str) -> list[Finding]:
+    """通俗表現を検出する。**オントロジーが返した**戻り値に同じ語があれば出典ありとして通す。
 
     「保温」は掲示基準の浴用プロトコル（入浴後の保温及び30分程度の安静）に、
     「保湿・美肌効果」は四万温泉 積善館の公式記述に現れる。オントロジーが返した語なら
     出典があるので指摘しない。
 
-    照合先はツール戻り値だけで、相談文は含めない。**利用者が「デトックス」と言ったことは、
-    温泉爺がその語を使ってよい根拠にはならない**。「掲示基準には無い」と否定するために
-    引用した場合も指摘は出るが、severity は warning なので読んで判断すればよい。
+    照合先を**グラフ由来の戻り値だけ**にしているのは、生テキスト検索（条件 D）で
+    「美人の湯」を載せた施設ページが戻り値に入ると、通俗表現がすべて素通りしてしまうためである。
+    オントロジーは法定知識・実データ・独自ヒューリスティックをファイルと注記で分けているので、
+    返ってきた語がどの性質のものかを言えるが、Web 本文にはその区別が無い。
+
+    相談文は照合先に含めない。**利用者が「デトックス」と言ったことは、温泉爺がその語を
+    使ってよい根拠にはならない**。「掲示基準には無い」と否定するために引用した場合も指摘は出るが、
+    severity は warning なので読んで判断すればよい。
     """
     return [
         Finding(kind="folk_expression", severity="warning", text=expression, detail=reason)
         for expression, reason in FOLK_EXPRESSIONS.items()
-        if expression in answer and expression not in tool_text
+        if expression in answer and expression not in ontology_text
     ]
+
+
+def nonstatutory_indications(graph: Graph) -> dict[str, str]:
+    """現行の掲示基準に無い効能表記の表をグラフから読む。``表記 -> 理由``。"""
+    key = id(graph)
+    cached = _nonstatutory_cache.get(key)
+    if cached is not None:
+        return cached
+    prefixes = (
+        "PREFIX onsen: <https://example.org/onsen#>\n"
+        "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+    )
+    table: dict[str, str] = {}
+    for label, comment in graph.query(prefixes + _NONSTATUTORY_QUERY):
+        table[str(label).strip()] = str(comment).strip() if comment is not None else ""
+    _nonstatutory_cache[key] = table
+    return table
+
+
+def _check_nonstatutory_indications(answer: str, graph: Graph | None) -> list[Finding]:
+    """現行の掲示基準に無い効能表記を、適応症として述べていないか見る。
+
+    条件 D（生テキスト検索）を入れると露出する穴への対処である。施設の公式ページには
+    「虚弱児童」「慢性婦人病」「うちみ」「くじき」といった表記が現に載っており、
+    ツール戻り値との照合では**出典ありとして通ってしまう**。判定基準は法定知識の側
+    （``onsen_knowledge.ttl`` の適応症一覧）にあり、この表は ``onsen:NonStatutoryIndication``
+    の個体として宣言してグラフから読む。
+
+    「これは現行の掲示基準には無い表記じゃ」と断りを入れている場合は指摘しない。
+    書いてあることを紹介した上で現行の一覧に無いと言うのは、むしろ正しい振る舞いである。
+    """
+    if graph is None:
+        return []
+    findings = []
+    for term, reason in sorted(nonstatutory_indications(graph).items()):
+        for match in re.finditer(re.escape(term), answer):
+            window = answer[max(0, match.start() - 60) : match.end() + 120]
+            if any(word in window for word in _NONSTATUTORY_DISCLAIMERS):
+                continue
+            findings.append(
+                Finding(
+                    kind="nonstatutory_indication",
+                    severity="error",
+                    text=term,
+                    detail=f"現行の掲示基準の適応症一覧に無い表記（{reason}）",
+                )
+            )
+            break
+    return findings
 
 
 def _check_disclosure(answer: str, tool_calls: list[ToolCallLog]) -> list[Finding]:
@@ -385,7 +479,7 @@ def _check_expected_tools(
     return findings
 
 
-def _check_paraphrases(answer: str, tool_text: str, graph: Graph | None) -> list[Finding]:
+def _check_paraphrases(answer: str, ontology_text: str, graph: Graph | None) -> list[Finding]:
     """条文表記の言い換えを検出する。
 
     第3話・第4話の時点では「病気の活動期（特に熱のあるとき）」→「急性疾患」のような
@@ -393,14 +487,15 @@ def _check_paraphrases(answer: str, tool_text: str, graph: Graph | None) -> list
     **オントロジーに無い言い換えは引っかからない**という構造的な穴だった。
     そこで言い換えの側をグラフに宣言し（``onsen:nonStandardParaphrase``）、対応表として使う。
 
-    条文表記そのものが回答に併記されている場合と、ツール戻り値に言い換え語が
-    含まれている場合は指摘しない。
+    条文表記そのものが回答に併記されている場合と、**オントロジーの**戻り値に言い換え語が
+    含まれている場合は指摘しない。生テキスト検索の戻り値を根拠にしないのは通俗表現と同じ理由で、
+    施設ページの効能書きは条文表記ではないためである。
     """
     if graph is None:
         return []
     findings = []
     for paraphrase, official in sorted(queries.paraphrase_table(graph).items()):
-        if paraphrase not in answer or paraphrase in tool_text:
+        if paraphrase not in answer or paraphrase in ontology_text:
             continue
         if official in answer:
             continue
@@ -422,16 +517,23 @@ def verify_answer(
     graph: Graph | None = None,
     question: str = "",
 ) -> list[Finding]:
-    """回答文をツール戻り値と照合する。問題が無ければ空リストを返す。"""
+    """回答文をツール戻り値と照合する。問題が無ければ空リストを返す。
+
+    数値と語彙は**すべての**ツール戻り値を出典として認める（生テキスト検索も同じ扱い。
+    でなければ条件の比較が「出典を持てるかどうか」の差にすり替わる）。一方で通俗表現と
+    条文の言い換えは**オントロジー由来の戻り値だけ**を根拠に判定する。
+    """
     tool_text = _serialize(tool_calls)
+    ontology_text = _serialize(tool_calls, source="ontology")
     allowed_text = f"{tool_text}\n{question}"
     allowed_numbers = _numbers(allowed_text)
 
     findings = _check_quantities(answer, allowed_numbers)
     if graph is not None:
         findings += _check_terms(answer, allowed_text, ontology_vocabulary(graph))
-    findings += _check_folk_expressions(answer, tool_text)
-    findings += _check_paraphrases(answer, tool_text, graph)
+    findings += _check_folk_expressions(answer, ontology_text)
+    findings += _check_paraphrases(answer, ontology_text, graph)
+    findings += _check_nonstatutory_indications(answer, graph)
     findings += _check_disclosure(answer, tool_calls)
     findings += _check_expected_tools(question, tool_calls, graph)
     return findings
@@ -501,6 +603,7 @@ __all__ = [
     "consult_expectations",
     "carry_over_note",
     "format_findings",
+    "nonstatutory_indications",
     "ontology_vocabulary",
     "repair_hints",
     "revision_request",

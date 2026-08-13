@@ -181,6 +181,32 @@ def test_heuristics_live_in_their_own_file() -> None:
             assert not list(other.subject_objects(prop)), f"{path.name} に {prop} がある"
 
 
+def test_nonstatutory_indications_are_absent_from_the_legal_file() -> None:
+    """「現行の掲示基準に無い効能表記」という宣言を、法定知識ファイルに対して検査する。
+
+    この表（``onsen:NonStatutoryIndication``）はどの語を列挙するかが本オントロジーの判断なので
+    ヒューリスティックのファイルに置いている。ただし「現行の掲示基準の適応症一覧に無い」という
+    主張自体は機械的に検査できる。``onsen_knowledge.ttl`` にその語が現れたら、宣言が誤っているか
+    法定知識の側が変わったかのどちらかなので、落として教える。
+
+    逆向きの取りこぼしも防ぐ。列挙した語が1件も無ければ、検算は何も検出しない。
+    """
+    from onsen_ontology.graph import HEURISTICS_FILE, KNOWLEDGE_FILE
+
+    heuristics = Graph()
+    heuristics.parse(HEURISTICS_FILE, format="turtle")
+    terms = [
+        str(label)
+        for subject in heuristics.subjects(RDF.type, ONSEN.NonStatutoryIndication)
+        for label in heuristics.objects(subject, RDFS.label)
+    ]
+    assert len(terms) >= 5
+
+    legal_text = KNOWLEDGE_FILE.read_text(encoding="utf-8")
+    for term in terms:
+        assert term not in legal_text, f"現行の掲示基準に現れる語を非法定として宣言している: {term}"
+
+
 def test_every_source_has_provenance(raw_graph: Graph) -> None:
     """すべての源泉に出典URLが付いている。"""
     for source in raw_graph.subjects(RDF.type, ONSEN.SpringSource):
