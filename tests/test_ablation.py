@@ -17,6 +17,7 @@ from rdflib import Graph
 
 from onsen_ontology import ablation
 from onsen_ontology.agent import (
+    DOCUMENT_SEARCH_SYSTEM_PROMPT,
     GUARDRAIL_ONLY_SYSTEM_PROMPT,
     PERSONA_ONLY_SYSTEM_PROMPT,
     SYSTEM_PROMPT,
@@ -54,15 +55,36 @@ def tools(graph: Graph) -> OnsenOntologyTools:
 
 
 def test_four_conditions_are_defined() -> None:
-    """条件は4つ。A と A+ はツールを持たず、B と C は持つ。"""
-    assert ablation.CONDITION_IDS == ("A", "A+", "B", "C")
+    """既定の条件は4つ。A はツールを持たず、B・C はオントロジー、D は文書検索を持つ。"""
+    assert ablation.CONDITION_IDS == ("A", "B", "C", "D")
     by_id = {c.id: c for c in ablation.CONDITIONS}
     assert by_id["A"].use_tools is False
-    assert by_id["A+"].use_tools is False
     assert by_id["B"].use_tools is True
     assert by_id["C"].use_tools is True
+    assert by_id["D"].use_tools is True
     # 差し戻すのは C だけ
     assert [c.id for c in ablation.CONDITIONS if c.revise] == ["C"]
+    # B・C はオントロジーのツール（既定）、D は文書検索に差し替える
+    assert by_id["B"].tool_specs is None
+    assert [spec["toolSpec"]["name"] for spec in by_id["D"].tool_specs] == [
+        "search_documents",
+        "fetch_document",
+    ]
+
+
+def test_optional_conditions_are_available_but_not_default() -> None:
+    """A+（Phase 6 で役目を終えた）と E（オントロジー＋文書検索）は明示すれば走る。
+
+    保存済みの Phase 6 の結果には A+ のレコードが入っているので、集計のラベルは残す必要がある。
+    """
+    optional = {c.id for c in ablation.OPTIONAL_CONDITIONS}
+    assert optional == {"A+", "E"}
+    assert optional.isdisjoint({c.id for c in ablation.CONDITIONS})
+    assert {c.id for c in ablation.ALL_CONDITIONS} == optional | set(ablation.CONDITION_IDS)
+    condition_e = next(c for c in ablation.OPTIONAL_CONDITIONS if c.id == "E")
+    names = [spec["toolSpec"]["name"] for spec in condition_e.tool_specs]
+    assert "describe_facility" in names
+    assert "search_documents" in names
 
 
 def test_baseline_prompts_do_not_leak_data() -> None:
@@ -70,7 +92,12 @@ def test_baseline_prompts_do_not_leak_data() -> None:
 
     プロンプト経由で答えを渡してしまうと比較が無意味になる。人格と規則だけを与える。
     """
-    for prompt in (PERSONA_ONLY_SYSTEM_PROMPT, GUARDRAIL_ONLY_SYSTEM_PROMPT, SYSTEM_PROMPT):
+    for prompt in (
+        PERSONA_ONLY_SYSTEM_PROMPT,
+        GUARDRAIL_ONLY_SYSTEM_PROMPT,
+        SYSTEM_PROMPT,
+        DOCUMENT_SEARCH_SYSTEM_PROMPT,
+    ):
         assert "2.08" not in prompt
         assert "湯畑" not in prompt
         assert "玉川" not in prompt
@@ -103,6 +130,22 @@ def test_tool_condition_sends_tool_config(tools: OnsenOntologyTools) -> None:
     assert client.requests[0]["system"][0]["text"] == SYSTEM_PROMPT
 
 
+def test_document_condition_sends_only_document_tools(tools: OnsenOntologyTools) -> None:
+    """条件 D にはオントロジーのツールを見せない。
+
+    生テキストのまま検索する側の条件なので、``describe_facility`` が見えていたら
+    「トリプルに整理する価値」を測れなくなる。規則の文言も文書検索向けに差し替える。
+    """
+    client = StubBedrockClient([_text_response("文書を引いたぞ。")])
+    condition = next(c for c in ablation.CONDITIONS if c.id == "D")
+    ablation.run_one(condition, ablation.QUESTIONS[0], tools=tools, client=client)
+    sent = [spec["toolSpec"]["name"] for spec in client.requests[0]["toolConfig"]["tools"]]
+    assert sent == ["search_documents", "fetch_document"]
+    assert client.requests[0]["system"][0]["text"] == DOCUMENT_SEARCH_SYSTEM_PROMPT
+    # 出典を語らせる規則は残す（RAG 側が出典を言えないと比較が成立しない）
+    assert "出典URL" in DOCUMENT_SEARCH_SYSTEM_PROMPT
+
+
 # --------------------------------------------------------------------------
 # 事実チェックの表
 # --------------------------------------------------------------------------
@@ -110,13 +153,22 @@ def test_tool_condition_sends_tool_config(tools: OnsenOntologyTools) -> None:
 
 def test_every_check_has_a_basis() -> None:
     """採点条件には必ず根拠（条文・公表値）を書く。根拠のない採点はしない。"""
-    assert len(ablation.QUESTIONS) == 8
+    assert len(ablation.QUESTIONS) == 12
     for question in ablation.QUESTIONS:
         assert question.checks, question.id
         assert question.ground_truth
+        # 生テキスト検索がどうなるかの予想を先に書いておく（あとから解釈を変えないため）
+        assert question.rag_forecast, question.id
         for check in question.checks:
             assert check.kind in ("expect", "forbid")
             assert len(check.basis) > 10, (question.id, check.label)
+
+
+def test_question_axes_cover_the_four_types() -> None:
+    """問い合わせの4つの型（照会・判定・計画・不明の申告）＋汚染を網羅している。"""
+    axes = " ".join(question.axis for question in ablation.QUESTIONS)
+    for kind in ("照会", "判定", "計画", "不明の申告", "汚染"):
+        assert kind in axes, kind
 
 
 def test_checks_pass_on_a_correct_answer() -> None:
@@ -124,18 +176,38 @@ def test_checks_pass_on_a_correct_answer() -> None:
     correct = {
         "Q1": "湯畑源泉は pH2.08 じゃ。草津は源泉ごとに pH が違うでな。",
         "Q2": (
-            "掲示泉質名は「酸性・含二酸化炭素・鉄（Ⅱ）－塩化物温泉」じゃ。"
-            "酸性泉の判定基準は水素イオン1mg/kg以上で、その成分値は公表されておらん。"
+            "草津は源泉ごとに違うんじゃ。湯畑源泉は pH2.08、万代源泉は pH1.7、"
+            "煮川源泉は pH2.1 と掲示されておる。"
         ),
-        "Q3": "掲示基準では42℃以上の高温浴は避けるよう定めておる。医師にも相談することじゃ。",
-        "Q4": "pH3未満の湯は真水で薄めて、1回100mLまでじゃ。成分値は公表されておらん。",
-        "Q5": "秋保温泉の pH は手元の資料に無い。現地の掲示を見んと分からんのう。",
+        "Q3": "金の湯は放流式と掲示しておるが、加水も加温も塩素消毒もしておる。",
+        "Q4": "掲示基準では42℃以上の高温浴は避けるよう定めておる。医師にも相談することじゃ。",
+        "Q5": "pH3未満の湯は真水で薄めて、1回100mLまでじゃ。成分値は公表されておらん。",
         "Q6": (
+            "大滝乃湯は煮川源泉、掲示泉質名は酸性硫黄泉じゃ。掲示基準の泉質別適応症では"
+            "アトピー性皮膚炎や尋常性乾癬が挙げられておる。"
+        ),
+        "Q7": (
+            "これはわしの経験則じゃが、酸性の強い湯のあとは単純温泉のような穏やかな湯で"
+            "肌を落ち着かせるとええ。掲示基準に定めがあるわけではない。"
+        ),
+        "Q8": (
             "開始後数日は1日1〜2回、1回3〜10分にとどめ、上がったら30分は安静にせい。"
             "42℃以上は避けよ。湯あたりは3日から1週間で出ることがある。"
         ),
-        "Q7": "掲示基準の適応症で言えばアトピー性皮膚炎じゃな。デトックスなどという言葉は掲示基準に無い。",
-        "Q8": "金の湯は放流式と掲示しておるが、加水も加温も塩素消毒もしておる。",
+        "Q9": (
+            "掲示から確認できるのは、登別温泉のさぎり湯と長湯温泉の御前湯じゃ。"
+            "掲示が無い施設は、実施しておらんという意味にはならん。"
+        ),
+        "Q10": "秋保温泉の pH は手元の資料に無い。現地の掲示を見んと分からんのう。",
+        "Q11": (
+            "掲示泉質名は「酸性・含二酸化炭素・鉄（Ⅱ）－塩化物温泉」じゃ。"
+            "酸性泉の判定基準は水素イオン1mg/kg以上でな。ラドン濃度は公表されておらんから、"
+            "放射能泉かどうかは分からん。"
+        ),
+        "Q12": (
+            "掲示基準の適応症で言えばアトピー性皮膚炎じゃな。"
+            "デトックスなどという言葉は掲示基準に無い。美肌も同じで、法令の記述ではない。"
+        ),
     }
     for question in ablation.QUESTIONS:
         checks = ablation.score_answer(question, correct[question.id])
@@ -147,17 +219,51 @@ def test_checks_fail_on_a_fabricated_answer() -> None:
     """一次情報から外れた回答は落ちる。禁止条件が効いていることも確かめる。"""
     fabricated = {
         "Q1": "草津の湯は pH2 くらいじゃ。",  # 公表値でない
-        "Q2": "pH1.2 未満だから酸性泉じゃ。",  # 判定基準の誤り
-        "Q3": "毎日入れば血圧が下がりますぞ。",  # 医学的断定
-        "Q4": "ナトリウムイオンが1200mg あるから1日500mLまでじゃ。",  # 成分値の捏造
-        "Q5": "秋保温泉は pH7.8 じゃ。",  # 収録していない値
-        "Q6": "好きなだけ何度でも入ってええぞ。",
-        "Q7": "デトックス効果で毒が抜けるぞ。",
-        "Q8": "源泉100%の完全なかけ流しじゃ。",
+        "Q2": "草津温泉の pH は 2.1 じゃ。どの湯も同じでな。",  # 温泉地単位にまとめた
+        "Q3": "源泉100%の完全なかけ流しじゃ。",
+        "Q4": "毎日入れば血圧が下がりますぞ。",  # 医学的断定
+        "Q5": "ナトリウムイオンが1200mg あるから1日500mLまでじゃ。",  # 成分値の捏造
+        "Q6": "効能は神経痛、うちみ、慢性婦人病、美肌じゃな。",  # 施設ページの旧表記
+        "Q7": "仕上げは硫黄泉がええぞ。",  # 刺激の強い泉質を仕上げ湯にした
+        "Q8": "好きなだけ何度でも入ってええぞ。",
+        "Q9": "どこもかけ流しじゃから、加水も消毒もしておらんぞ。",
+        "Q10": "秋保温泉は pH7.8 じゃ。",  # 収録していない値
+        "Q11": "玉川温泉は放射能泉である。ラドンがたっぷりじゃ。",
+        "Q12": "デトックス効果で毒が抜けるぞ。美肌にもええ。",
     }
     for question in ablation.QUESTIONS:
         checks = ablation.score_answer(question, fabricated[question.id])
         assert any(not c["passed"] for c in checks), question.id
+
+
+def test_finishing_bath_check_does_not_punish_correct_explanation() -> None:
+    """「酸性泉・硫黄泉の後の仕上げ湯として推奨される」という正しい説明を落とさない。
+
+    実測で見つかった採点器の誤検出である。最初の禁止条件は「仕上げ」の近くに「酸性泉」
+    「硫黄泉」があれば落としていたので、オントロジーが返した関係をそのまま説明した回答
+    （炭酸水素塩泉を勧めつつ、それが酸性泉・硫黄泉の後の仕上げ湯だと述べる）が
+    不合格になっていた。禁止したいのは**刺激の強い泉質を仕上げに勧めること**である。
+    """
+    q7 = next(q for q in ablation.QUESTIONS if q.id == "Q7")
+    correct = (
+        "炭酸水素塩泉じゃな。これは酸性泉・硫黄泉の後の仕上げ湯として推奨されておる関係じゃ。"
+        "ただし法令ではなく、わしの経験則の類じゃ。"
+    )
+    assert all(c["passed"] for c in ablation.score_answer(q7, correct))
+    wrong = "仕上げは硫黄泉がええぞ。"
+    forbid = [c for c in ablation.score_answer(q7, wrong) if c["kind"] == "forbid"]
+    assert not any(c["passed"] for c in forbid)
+
+
+def test_area_level_ph_is_treated_as_an_error() -> None:
+    """草津の pH を温泉地単位で1つの値として述べたら落とす（源泉ごとに違う）。"""
+    q2 = next(q for q in ablation.QUESTIONS if q.id == "Q2")
+    lumped = "草津温泉の pH は 2.1 じゃ。"
+    forbid = [c for c in ablation.score_answer(q2, lumped) if c["kind"] == "forbid"]
+    assert not any(c["passed"] for c in forbid)
+    # 「草津温泉の pH は源泉ごとに違う」は落とさない
+    correct = "草津温泉の pH は源泉ごとに違う。湯畑源泉2.08、万代源泉1.7、煮川源泉2.1 じゃ。"
+    assert all(c["passed"] for c in ablation.score_answer(q2, correct))
 
 
 def test_forbid_check_allows_denial() -> None:
@@ -165,10 +271,28 @@ def test_forbid_check_allows_denial() -> None:
 
     禁止したいのは効能として語ることであって、語そのものの出現ではない。
     """
-    q7 = next(q for q in ablation.QUESTIONS if q.id == "Q7")
-    denial = "デトックスという言葉は掲示基準に無い。皮膚乾燥症なら適応症に挙げられておる。"
-    forbid = [c for c in ablation.score_answer(q7, denial) if c["kind"] == "forbid"]
+    q12 = next(q for q in ablation.QUESTIONS if q.id == "Q12")
+    denial = (
+        "デトックスという言葉は掲示基準に無い。美肌も載っておらん。"
+        "皮膚乾燥症なら適応症に挙げられておる。"
+    )
+    forbid = [c for c in ablation.score_answer(q12, denial) if c["kind"] == "forbid"]
     assert all(c["passed"] for c in forbid)
+
+
+def test_nonstatutory_wording_is_allowed_when_flagged_as_such() -> None:
+    """旧い効能表記を「現行の掲示基準には無い」と断って紹介するのは通す。
+
+    施設の掲示をそのまま伝えることは間違いではない。間違いなのは、それを現行の掲示基準の
+    適応症として述べることである。
+    """
+    q6 = next(q for q in ablation.QUESTIONS if q.id == "Q6")
+    answer = (
+        "大滝乃湯の公式ページは「うちみ、慢性婦人病」と書いておるが、"
+        "これは現行の掲示基準の適応症一覧には無い表記じゃ。"
+        "掲示基準の泉質別適応症で言えばアトピー性皮膚炎などになる。"
+    )
+    assert all(c["passed"] for c in ablation.score_answer(q6, answer))
 
 
 # --------------------------------------------------------------------------
@@ -276,8 +400,9 @@ def test_rescore_applies_current_checks_to_saved_answers() -> None:
     record = ablation.Record(
         condition="A",
         question="Q1",
-        axis="源泉の粒度",
+        axis="照会: 源泉の公表値",
         answer="湯畑源泉は pH2.08 じゃ。",
+        question_set=ablation.QUESTION_SET,
         checks=[{"label": "古い採点", "kind": "expect", "basis": "x" * 20, "passed": False}],
     )
     rescored = ablation.rescore([record])[0]
@@ -287,13 +412,31 @@ def test_rescore_applies_current_checks_to_saved_answers() -> None:
     assert rescored.checks_passed == 1
 
 
+def test_rescore_leaves_other_question_sets_alone() -> None:
+    """問セットが違う結果には現在の採点条件を当てない。
+
+    Phase 6 は8問、Phase 7 は12問で、同じ ``Q3`` が別の相談を指す（旧 Q3 は高血圧、
+    新 Q3 は金の湯）。当ててしまうと無関係な条件で採点した数字が出る。
+    """
+    old = ablation.Record(
+        condition="A",
+        question="Q3",
+        axis="法定の言い回し",
+        answer="掲示基準では42℃以上の高温浴は避けるとある。",
+        checks=[{"label": "旧: 42℃に触れる", "kind": "expect", "basis": "x" * 20, "passed": True}],
+    )
+    rescored = ablation.rescore([old])[0]
+    assert [c["label"] for c in rescored.checks] == ["旧: 42℃に触れる"]
+    assert ablation.question_sets([old]) == {"phase6-8q（問セット未記録）": 1}
+
+
 def test_missing_data_is_accepted_in_several_wordings() -> None:
     """「分からない」の言い方は1つではない。実測で出た言い方を採点条件に含める。
 
     Sonnet 4.6 は「わしが持っているデータの中に見当たらなかった」と答えた。
     実質は「収録していない」と言えているので、これを不合格にするのは採点器の取りこぼしである。
     """
-    q5 = next(q for q in ablation.QUESTIONS if q.id == "Q5")
+    q10 = next(q for q in ablation.QUESTIONS if q.id == "Q10")
     wordings = [
         "秋保温泉の pH は手元の資料に無い。",
         "わしが持っているデータの中に秋保温泉の施設は見当たらなかった。",
@@ -301,7 +444,7 @@ def test_missing_data_is_accepted_in_several_wordings() -> None:
         "そこは公表されておらん。",
     ]
     for answer in wordings:
-        checks = ablation.score_answer(q5, answer)
+        checks = ablation.score_answer(q10, answer)
         assert all(c["passed"] for c in checks), answer
     # 数値を作ったら落ちることは変わらない
-    assert not all(c["passed"] for c in ablation.score_answer(q5, "秋保温泉は pH7.8 じゃ。"))
+    assert not all(c["passed"] for c in ablation.score_answer(q10, "秋保温泉は pH7.8 じゃ。"))

@@ -202,13 +202,16 @@ def cmd_eval(args: argparse.Namespace) -> int:
             {
                 "件数": len(records),
                 "実行ファイル数": len(args.report),
+                "問セット": ablation.question_sets(records),
                 "条件ごとの集計": ablation.summarize(records),
                 "問ごとの事実チェック": ablation.per_question_table(records),
             }
         )
         return 0
 
-    conditions = [c for c in ablation.CONDITIONS if not args.conditions or c.id in args.conditions]
+    # A+ と E は既定では走らせないが、--conditions で明示すれば走る
+    selected = ablation.ALL_CONDITIONS if args.conditions else ablation.CONDITIONS
+    conditions = [c for c in selected if not args.conditions or c.id in args.conditions]
     questions = [q for q in ablation.QUESTIONS if not args.questions or q.id in args.questions]
     if not conditions or not questions:
         print("条件または問が空である", file=sys.stderr)
@@ -218,12 +221,28 @@ def cmd_eval(args: argparse.Namespace) -> int:
         _print(
             {
                 "呼び出し回数（差し戻しを除く）": len(conditions) * len(questions),
+                "問セット": ablation.QUESTION_SET,
                 "条件": [
-                    {"id": c.id, "内容": c.label, "ツール": c.use_tools, "差し戻し": c.revise}
+                    {
+                        "id": c.id,
+                        "内容": c.label,
+                        "ツール": (
+                            [spec["toolSpec"]["name"] for spec in c.tool_specs]
+                            if c.tool_specs is not None
+                            else ("オントロジー10件" if c.use_tools else False)
+                        ),
+                        "差し戻し": c.revise,
+                    }
                     for c in conditions
                 ],
                 "問": [
-                    {"id": q.id, "軸": q.axis, "相談": q.text, "検査数": len(q.checks)}
+                    {
+                        "id": q.id,
+                        "軸": q.axis,
+                        "相談": q.text,
+                        "検査数": len(q.checks),
+                        "RAGの予想": q.rag_forecast,
+                    }
                     for q in questions
                 ],
             }
@@ -245,6 +264,50 @@ def cmd_eval(args: argparse.Namespace) -> int:
             "問ごとの事実チェック": ablation.per_question_table(records),
         }
     )
+    return 0
+
+
+def cmd_corpus(args: argparse.Namespace) -> int:
+    """比較実験用のコーパス（生テキスト側）を構築・検索する。
+
+    コーパスは ``docs/*.md`` が出典として記録している URL 群である（人が選別しない）。
+    取得物は第三者の著作物なので git 管理外に置き、このコマンドで組み直せるようにしている。
+    """
+    from pathlib import Path
+
+    from . import corpus as corpus_module
+    from .retrieval import DocumentIndex, DocumentSearchTools
+
+    directory = Path(args.dir)
+
+    if args.action == "build":
+        urls = corpus_module.source_urls()
+        print(f"docs が出典として記録している URL: {len(urls)}件", file=sys.stderr)
+        report = corpus_module.build_corpus(
+            out_dir=directory, interval=args.interval, progress=True
+        )
+        _print(report.to_dict())
+        return 0
+
+    if not directory.exists():
+        print(f"コーパスが無い: {directory}（uv run onsen corpus build で作る）", file=sys.stderr)
+        return 1
+
+    index = DocumentIndex.from_directory(directory)
+    if args.action == "stats":
+        _print(
+            {
+                "文書数": len(index.document_ids),
+                "チャンク数": len(index),
+                "総文字数": sum(len(chunk.text) for chunk in index.chunks),
+            }
+        )
+        return 0
+
+    if not args.query:
+        print("検索語を指定する", file=sys.stderr)
+        return 1
+    _print(DocumentSearchTools(index).search_documents(" ".join(args.query), top_k=args.top_k))
     return 0
 
 
@@ -361,9 +424,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--conditions",
         nargs="*",
         metavar="ID",
-        help="実行する条件。既定は全部（A: 素のLLM / A+: 規則のみ / B: ツールあり / C: 検算の差し戻し）",
+        help=(
+            "実行する条件。既定は A（素のLLM）/ B（オントロジー）/ C（検算の差し戻し）/ "
+            "D（生テキストの文書検索）。明示すれば A+（規則のみ）と E（両方）も走る"
+        ),
     )
-    p.add_argument("--questions", nargs="*", metavar="ID", help="実行する問。既定は全部（Q1〜Q8）")
+    p.add_argument("--questions", nargs="*", metavar="ID", help="実行する問。既定は全部（Q1〜Q12）")
     p.add_argument("--out", help="結果の JSONL 出力先。既定は .cache/ablation-<時刻>.jsonl")
     p.add_argument(
         "--report",
@@ -373,6 +439,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--dry-run", action="store_true", help="呼び出し計画を表示するだけ")
     p.set_defaults(func=cmd_eval)
+
+    p = sub.add_parser(
+        "corpus",
+        help="比較実験用のコーパスを構築・検索する（docs の出典URLを取得して Markdown 化）",
+    )
+    p.add_argument(
+        "action",
+        choices=["build", "search", "stats"],
+        help="build=取得しなおす / search=BM25で検索してみる / stats=索引の統計",
+    )
+    p.add_argument("query", nargs="*", help="search のときの検索語")
+    p.add_argument("--dir", default="corpus", help="コーパスの置き場所（既定 corpus/）")
+    p.add_argument("--top-k", type=int, default=5, help="search の件数")
+    p.add_argument("--interval", type=float, default=1.0, help="取得の間隔（秒）")
+    p.set_defaults(func=cmd_corpus)
 
     p = sub.add_parser("graph", help="グラフの一部を図にする（DOT / PNG / SVG）")
     p.add_argument(
