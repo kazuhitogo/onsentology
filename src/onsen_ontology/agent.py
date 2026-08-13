@@ -114,6 +114,46 @@ GUARDRAIL_ONLY_SYSTEM_PROMPT = """\
 - 相手の症状を診断する
 """
 
+#: 効果検証用の条件 D（表現形式の比較）。オントロジーの代わりに**同じ一次情報の生テキスト**を
+#: 検索させる。規則は :data:`SYSTEM_PROMPT` と同じ強さで与え、参照先だけを差し替えている。
+#: ツールの説明文が「オントロジー」から「文書」に変わる以上、規則の文言もそれに合わせないと
+#: 「守れない規則を課した」ことになり比較が成立しない。
+DOCUMENT_SEARCH_SYSTEM_PROMPT = """\
+あんたは「温泉爺（おんせんじい）」という人格を持つ温泉の案内人じゃ。
+
+## 人物設定
+元は分析化学の技術者。定年後に温泉地へ隠居し、生涯で1,200湯を巡った。温泉分析書を読むのが趣味。
+一人称は「わし」、相手は「あんた」と呼ぶ。語尾は「〜じゃ」「〜のう」「〜じゃろ」「〜かい」を
+3文に1回程度の頻度で使う。使いすぎると読みにくいので抑えること。
+
+## 手元にあるもの
+環境省の通知（鉱泉分析法指針・掲示基準・温泉利用基準・温泉法）と、各温泉施設・自治体・
+観光協会の公表ページを**そのままの文章で**集めた文書集がある。search_documents で検索し、
+fetch_document で全文を読める。各文書には出典URLと取得日が付いておる。
+
+## 絶対に守る規則
+1. 泉質・pH・源泉温度・適応症・禁忌症・湯使いは、**文書検索で取れた記述だけ**を使うこと。
+   検索しても出てこない項目は「そこは現地の掲示を見んと分からんのう」と正直に言う。
+   知識から補ってはならない。数値の捏造は絶対にしない。
+2. 適応症・禁忌症に触れるときは、それが環境省の「掲示基準」に基づく区分であることを
+   会話の中で一度は明示する。文書の中には掲示基準の条文そのものもあるので、
+   施設ページの効能書きと条文を混同しないこと。
+3. 医学的な断定をしない。「治る」「効く」ではなく「掲示基準では〜が適応症に挙げられておる」と言う。
+4. 相手が発熱中・急性症状・持病の急な悪化などを訴えている場合は、温泉の話をする前に
+   まず医師に相談するよう伝える。掲示基準の一般的禁忌症に該当しうるからじゃ。
+5. 巡浴（はしご湯）や連泊の相談では、掲示基準の浴用プロトコル（入浴回数・入浴時間・高温浴・
+   湯あたり）を文書から引いて注意点を伝える。法令に根拠のある話と、あんた自身の経験則を
+   混同してはならん。経験則を語るときは「これはわしの経験則じゃが」と前置きすること。
+6. 回答の最後に、根拠にした施設名・源泉名と**出典URL**を挙げる。
+7. 聞き返す前に、まず調べる。相談内容から検索できることが1つでもあるなら、
+   search_documents を呼んでから answer を組み立てること。
+
+## やらないこと
+- 出典のない数値を出す
+- 湯あたりを軽視して連続入浴を勧める
+- 相手の症状を診断する
+"""
+
 
 # --------------------------------------------------------------------------
 # ツール定義
@@ -233,25 +273,79 @@ TOOL_SPECS: list[dict[str, Any]] = [
 ]
 
 
+#: 生テキスト検索のツール（効果検証の条件 D）。オントロジーのツール10個の対抗馬である。
+#: 与えるのは2つだけ。「検索して読む」以上のことは生テキストでは提供できないという主張が
+#: 検証の対象なので、ここに計算する道具を足してはならない。
+DOCUMENT_TOOL_SPECS: list[dict[str, Any]] = [
+    _tool(
+        "search_documents",
+        "温泉の一次情報を集めた文書集をキーワードで検索する（BM25）。環境省の通知"
+        "（鉱泉分析法指針・掲示基準・温泉利用基準・温泉法）と、各温泉施設・自治体・観光協会の"
+        "公表ページの本文が入っている。各結果には出典URLと取得日が付く。"
+        "語を変えて何度でも検索してよい。",
+        {
+            "query": {"type": "string", "description": "検索語。例: 湯畑源泉 pH"},
+            "top_k": {"type": "integer", "description": "取得件数（既定5）"},
+        },
+        ["query"],
+    ),
+    _tool(
+        "fetch_document",
+        "検索で見つかった文書の全文を読む。長い文書は offset を進めて続きを読む。",
+        {
+            "document_id": {
+                "type": "string",
+                "description": "search_documents が返した document_id または chunk_id",
+            },
+            "offset": {"type": "integer", "description": "読み始める文字位置（既定0）"},
+        },
+        ["document_id"],
+    ),
+]
+
+#: 生テキスト側のツール名。検算で「出典の質」を区別するために使う（:mod:`onsen_ontology.verify`）。
+DOCUMENT_TOOL_NAMES: frozenset[str] = frozenset(
+    spec["toolSpec"]["name"] for spec in DOCUMENT_TOOL_SPECS
+)
+
+
 @dataclass
 class ToolCallLog:
     """ツール呼び出しの記録。回答の検証に使う。
 
     :param turn: 何ターン目の呼び出しか。1ターンで複数のツールを並べて呼ぶことがあるので、
         呼び出しの順序だけでは「同時に決めたのか、前の結果を見て決めたのか」が区別できない。
+    :param source: 戻り値の出所。``"ontology"``（グラフ）または ``"documents"``（生テキスト）。
+        検算は「ツール戻り値に無い語」を指摘するが、**生テキストに書いてあることと、
+        法定の記述であることは違う**。「美人の湯」を載せた施設ページが戻り値になったからといって
+        通俗表現を許してはならないので、出所を分けて記録する。
     """
 
     name: str
     input: dict[str, Any]
     output: Any
     turn: int = 0
+    source: str = "ontology"
 
 
 class OnsenOntologyTools:
-    """オントロジーをツールとして提供する。Bedrock に依存しないので単体テストできる。"""
+    """オントロジーをツールとして提供する。Bedrock に依存しないので単体テストできる。
 
-    def __init__(self, graph: Graph | None = None) -> None:
+    :param documents: 生テキストの文書検索（条件 D・E）。渡さなければ ``corpus/`` から
+        遅延読み込みする。オントロジー側の条件では一度も呼ばれないので索引も作られない。
+    """
+
+    def __init__(self, graph: Graph | None = None, *, documents: Any = None) -> None:
         self.graph = graph if graph is not None else load_inferred_graph()
+        self._documents = documents
+
+    @property
+    def documents(self) -> Any:
+        if self._documents is None:
+            from .retrieval import DocumentSearchTools
+
+            self._documents = DocumentSearchTools()
+        return self._documents
 
     def call(self, name: str, arguments: dict[str, Any]) -> Any:
         handler = getattr(self, f"_tool_{name}", None)
@@ -295,6 +389,13 @@ class OnsenOntologyTools:
     def _tool_evaluate_drinking_contraindications(self, source: str) -> Any:
         return queries.evaluate_drinking_contraindications(self.graph, source)
 
+    # -- 生テキストの文書検索（条件 D・E） -------------------------------
+    def _tool_search_documents(self, query: str, top_k: int = 5) -> Any:
+        return self.documents.search_documents(query, top_k=top_k)
+
+    def _tool_fetch_document(self, document_id: str, offset: int = 0) -> Any:
+        return self.documents.fetch_document(document_id, offset=offset)
+
 
 @dataclass
 class AgentResult:
@@ -325,6 +426,7 @@ class OnsenGeezerAgent:
         client: Any = None,
         use_tools: bool = True,
         system_prompt: str | None = None,
+        tool_specs: list[dict[str, Any]] | None = None,
     ) -> None:
         self.tools = tools if tools is not None else OnsenOntologyTools()
         self.model_id = model_id or os.environ.get("ONSEN_BEDROCK_MODEL_ID", DEFAULT_MODEL_ID)
@@ -333,6 +435,8 @@ class OnsenGeezerAgent:
         self._client = client
         self.use_tools = use_tools
         self.system_prompt = system_prompt or SYSTEM_PROMPT
+        #: モデルに見せるツール。条件 D では生テキスト検索の2つだけに差し替える。
+        self.tool_specs = tool_specs if tool_specs is not None else TOOL_SPECS
         self.messages: list[dict[str, Any]] = []
 
     @property
@@ -398,7 +502,7 @@ class OnsenGeezerAgent:
             # ツールを渡さない条件（効果検証の対照）では toolConfig を付けない。
             # 空の tools を渡すと Bedrock がバリデーションエラーを返すため、キー自体を落とす。
             if self.use_tools:
-                request["toolConfig"] = {"tools": TOOL_SPECS}
+                request["toolConfig"] = {"tools": self.tool_specs}
             response = self.client.converse(**request)
             for key in usage_total:
                 usage_total[key] += response.get("usage", {}).get(key, 0)
@@ -423,6 +527,9 @@ class OnsenGeezerAgent:
                         input=use.get("input") or {},
                         output=output,
                         turn=turns,
+                        source=(
+                            "documents" if use["name"] in DOCUMENT_TOOL_NAMES else "ontology"
+                        ),
                     )
                 )
                 tool_results.append(
@@ -448,6 +555,9 @@ class OnsenGeezerAgent:
 __all__ = [
     "DEFAULT_MODEL_ID",
     "DEFAULT_REGION",
+    "DOCUMENT_SEARCH_SYSTEM_PROMPT",
+    "DOCUMENT_TOOL_NAMES",
+    "DOCUMENT_TOOL_SPECS",
     "GUARDRAIL_ONLY_SYSTEM_PROMPT",
     "PERSONA_ONLY_SYSTEM_PROMPT",
     "SYSTEM_PROMPT",

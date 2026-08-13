@@ -29,6 +29,10 @@ PLAN.md
 # .cache は推論キャッシュを捨てるために rm -rf することがあるので、別ディレクトリに置く。
 eval-results/
 
+# 比較実験用のコーパス（環境省の通知と各施設の公表ページの本文）。
+# 第三者の著作物なので再配布はしない。uv run onsen corpus build で組み直せる。
+corpus/
+
 # onsen graph の出力（図はリポジトリに置かない）
 *.png
 *.svg

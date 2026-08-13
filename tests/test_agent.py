@@ -13,6 +13,8 @@ import pytest
 from rdflib import Graph
 
 from onsen_ontology.agent import (
+    DOCUMENT_TOOL_NAMES,
+    DOCUMENT_TOOL_SPECS,
     SYSTEM_PROMPT,
     TOOL_SPECS,
     OnsenGeezerAgent,
@@ -30,9 +32,13 @@ def tools(graph: Graph) -> OnsenOntologyTools:
 
 
 def test_tool_specs_are_wellformed() -> None:
-    """すべてのツールに対応するハンドラが存在し、スキーマが揃っている。"""
+    """すべてのツールに対応するハンドラが存在し、スキーマが揃っている。
+
+    生テキスト検索のツール（条件 D）も同じ ``OnsenOntologyTools`` が実装する。
+    検算がグラフを必要とするので、条件 D でもグラフを持ったツール層を使うためである。
+    """
     names = set()
-    for spec in TOOL_SPECS:
+    for spec in [*TOOL_SPECS, *DOCUMENT_TOOL_SPECS]:
         tool = spec["toolSpec"]
         assert tool["name"]
         assert len(tool["description"]) > 20
@@ -43,6 +49,8 @@ def test_tool_specs_are_wellformed() -> None:
         names.add(tool["name"])
     handlers = {a[len("_tool_") :] for a in dir(OnsenOntologyTools) if a.startswith("_tool_")}
     assert names == handlers
+    # 生テキスト側は「検索して読む」の2つだけ。計算する道具を足すと比較の主題が壊れる
+    assert set(DOCUMENT_TOOL_NAMES) == {"search_documents", "fetch_document"}
 
 
 def test_all_tool_outputs_are_json_serializable(tools: OnsenOntologyTools) -> None:
