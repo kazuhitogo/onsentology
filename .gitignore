@@ -33,6 +33,10 @@ eval-results/
 # 第三者の著作物なので再配布はしない。uv run onsen corpus build で組み直せる。
 corpus/
 
+# 揃えた生ドキュメント（比較条件F）。グラフから生成できるので置かない。
+# uv run onsen corpus align で作り直せる。
+corpus-aligned/
+
 # onsen graph の出力（図はリポジトリに置かない）
 *.png
 *.svg

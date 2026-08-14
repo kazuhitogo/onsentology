@@ -73,18 +73,34 @@ def test_four_conditions_are_defined() -> None:
 
 
 def test_optional_conditions_are_available_but_not_default() -> None:
-    """A+（Phase 6 で役目を終えた）と E（オントロジー＋文書検索）は明示すれば走る。
+    """A+（Phase 6 で役目を終えた）、E（両方）、F（揃えた生ドキュメント）は明示すれば走る。
 
     保存済みの Phase 6 の結果には A+ のレコードが入っているので、集計のラベルは残す必要がある。
+    F は Phase 7 の実測を一度回したあとに足した追試なので、既定条件には入れない
+    （既定で走らせると A〜D の288サンプルと同時に測ったように見えてしまう）。
     """
     optional = {c.id for c in ablation.OPTIONAL_CONDITIONS}
-    assert optional == {"A+", "E"}
+    assert optional == {"A+", "E", "F"}
     assert optional.isdisjoint({c.id for c in ablation.CONDITIONS})
     assert {c.id for c in ablation.ALL_CONDITIONS} == optional | set(ablation.CONDITION_IDS)
     condition_e = next(c for c in ablation.OPTIONAL_CONDITIONS if c.id == "E")
     names = [spec["toolSpec"]["name"] for spec in condition_e.tool_specs]
     assert "describe_facility" in names
     assert "search_documents" in names
+
+
+def test_aligned_document_condition_differs_only_in_the_corpus() -> None:
+    """条件 F は D とツールもプロンプトも同じで、コーパスだけが違う。
+
+    ここが崩れると「揃えた文書なら届くのか」ではなく別のものを測ってしまう。
+    """
+    d = next(c for c in ablation.CONDITIONS if c.id == "D")
+    f = next(c for c in ablation.OPTIONAL_CONDITIONS if c.id == "F")
+    assert f.system_prompt == d.system_prompt
+    assert f.tool_specs == d.tool_specs
+    assert f.revise == d.revise is False
+    assert d.corpus_dir is None
+    assert f.corpus_dir == "corpus-aligned"
 
 
 def test_baseline_prompts_do_not_leak_data() -> None:

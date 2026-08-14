@@ -70,6 +70,8 @@ class Condition:
 
     :param tool_specs: モデルに見せるツール。``None`` ならオントロジーのツール10個。
         条件 D では生テキスト検索の2つに差し替える。
+    :param corpus_dir: 文書検索に使うコーパス。``None`` なら既定（``corpus/``、Web から
+        丸ごと取得した生テキスト）。条件 F では「揃えた生ドキュメント」に差し替える。
     """
 
     id: str
@@ -79,6 +81,7 @@ class Condition:
     revise: bool
     note: str
     tool_specs: tuple[dict[str, Any], ...] | None = None
+    corpus_dir: str | None = None
 
 
 CONDITIONS: tuple[Condition, ...] = (
@@ -141,6 +144,21 @@ OPTIONAL_CONDITIONS: tuple[Condition, ...] = (
         revise=False,
         note="両方を渡す。実務での最終形。どちらを引くかはモデルに任せる。",
         tool_specs=tuple(TOOL_SPECS) + tuple(DOCUMENT_TOOL_SPECS),
+    ),
+    Condition(
+        id="F",
+        label="揃えた生ドキュメントの文書検索（BM25）",
+        use_tools=True,
+        system_prompt=DOCUMENT_SEARCH_SYSTEM_PROMPT,
+        revise=False,
+        note=(
+            "条件 D と同じツール・同じプロンプトで、コーパスだけを「揃えた生ドキュメント」に"
+            "差し替える。グラフに明示されている事実だけを同じ書式で並べた文書集で、"
+            "推論値（無加工供給・皮膚刺激）とヒューリスティック（仕上げ湯）は入れていない。"
+            "「Ontology 同様に生のドキュメントを揃えれば精度は上がるのか」を測る。"
+        ),
+        tool_specs=tuple(DOCUMENT_TOOL_SPECS),
+        corpus_dir="corpus-aligned",
     ),
 )
 
@@ -647,6 +665,25 @@ def score_answer(question: Question, answer: str) -> list[dict[str, Any]]:
     ]
 
 
+#: 条件ごとの文書検索ツールのキャッシュ。BM25 の索引を問ごとに作り直さないため。
+_document_tools_cache: dict[str, Any] = {}
+
+
+def _tools_for(condition: Condition, tools: OnsenOntologyTools) -> OnsenOntologyTools:
+    """条件が別のコーパスを指しているなら、その索引を持つツール層を返す。"""
+    if condition.corpus_dir is None:
+        return tools
+    if condition.corpus_dir not in _document_tools_cache:
+        from .retrieval import DocumentSearchTools
+
+        _document_tools_cache[condition.corpus_dir] = DocumentSearchTools(
+            corpus_dir=condition.corpus_dir
+        )
+    return OnsenOntologyTools(
+        tools.graph, documents=_document_tools_cache[condition.corpus_dir]
+    )
+
+
 def run_one(
     condition: Condition,
     question: Question,
@@ -656,7 +693,7 @@ def run_one(
 ) -> Record:
     """1条件×1問を実行する。会話履歴は持ち越さない（1問ごとに新しいエージェント）。"""
     agent = OnsenGeezerAgent(
-        tools,
+        _tools_for(condition, tools),
         client=client,
         use_tools=condition.use_tools,
         system_prompt=condition.system_prompt,

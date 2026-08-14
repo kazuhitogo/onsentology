@@ -280,6 +280,12 @@ def cmd_corpus(args: argparse.Namespace) -> int:
 
     directory = Path(args.dir)
 
+    if args.action == "align":
+        from .aligned import build_aligned_corpus
+
+        _print(build_aligned_corpus(out_dir=args.dir if args.dir != "corpus" else "corpus-aligned"))
+        return 0
+
     if args.action == "build":
         urls = corpus_module.source_urls()
         print(f"docs が出典として記録している URL: {len(urls)}件", file=sys.stderr)
@@ -446,8 +452,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "action",
-        choices=["build", "search", "stats"],
-        help="build=取得しなおす / search=BM25で検索してみる / stats=索引の統計",
+        choices=["build", "align", "search", "stats"],
+        help=(
+            "build=Web から取得しなおす / align=グラフから揃えた生ドキュメントを書き出す"
+            " / search=BM25で検索してみる / stats=索引の統計"
+        ),
     )
     p.add_argument("query", nargs="*", help="search のときの検索語")
     p.add_argument("--dir", default="corpus", help="コーパスの置き場所（既定 corpus/）")
