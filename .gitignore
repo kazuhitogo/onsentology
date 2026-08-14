@@ -25,9 +25,11 @@ HANDOVER.md
 HISTORY.md
 PLAN.md
 
-# 効果検証の実測結果（Bedrock を実際に呼んだ記録。再取得には課金と30分かかる）
-# .cache は推論キャッシュを捨てるために rm -rf することがあるので、別ディレクトリに置く。
-eval-results/
+# 効果検証の実測結果（Bedrock を実際に呼んだ記録）は **コミットする**。
+# 記事の数字を後から誰でも再集計できるようにするため。ただしモデル ARN には
+# アカウント ID が入るので、scripts/sanitize-eval-results.py でモデル名に置換してから入れる。
+# 実行時に作る集計の副産物（*.summary.json）は再生成できるので置かない。
+eval-results/*.summary.json
 
 # 比較実験用のコーパス（環境省の通知と各施設の公表ページの本文）。
 # 第三者の著作物なので再配布はしない。uv run onsen corpus build で組み直せる。

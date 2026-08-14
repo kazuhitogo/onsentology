@@ -49,12 +49,14 @@ from pathlib import Path
 from typing import Any
 
 from .agent import (
+    CALCULATION_TOOL_SPECS,
     DOCUMENT_SEARCH_SYSTEM_PROMPT,
     DOCUMENT_TOOL_SPECS,
     GUARDRAIL_ONLY_SYSTEM_PROMPT,
     PERSONA_ONLY_SYSTEM_PROMPT,
     SYSTEM_PROMPT,
     TOOL_SPECS,
+    TOOL_SPECS_PHASE7,
     OnsenGeezerAgent,
     OnsenOntologyTools,
 )
@@ -84,6 +86,15 @@ class Condition:
     corpus_dir: str | None = None
 
 
+#: 条件 H のプロンプト追記。文書検索の規則に、計算ツールの存在だけを足す。
+#: 規則そのものは条件 D・F と同じにしておかないと、比較が「プロンプトの差」になってしまう。
+CALCULATION_TOOL_NOTE = """
+## 計算の道具
+文書に書いていない計算は、次のツールで行える。巡浴（はしご湯）の順番と法定プロトコルの検証は
+plan_itinerary / validate_itinerary、含有成分別禁忌症の限界飲用量は
+evaluate_drinking_contraindications を使うこと。**計算結果もツールが返した値だけを使う。**
+"""
+
 CONDITIONS: tuple[Condition, ...] = (
     Condition(
         id="A",
@@ -99,7 +110,11 @@ CONDITIONS: tuple[Condition, ...] = (
         use_tools=True,
         system_prompt=SYSTEM_PROMPT,
         revise=False,
-        note="tool calling でオントロジーを引く。検算はするが回答には反映しない。",
+        note=(
+            "tool calling でオントロジーを引く。検算はするが回答には反映しない。"
+            "ツールは Phase 7 を測ったときの10個に固定する（当時の条件を再現するため）。"
+        ),
+        tool_specs=tuple(TOOL_SPECS_PHASE7),
     ),
     Condition(
         id="C",
@@ -107,7 +122,11 @@ CONDITIONS: tuple[Condition, ...] = (
         use_tools=True,
         system_prompt=SYSTEM_PROMPT,
         revise=True,
-        note="検算の指摘を温泉爺自身に差し戻して1回だけ書き直させる。",
+        note=(
+            "検算の指摘を温泉爺自身に差し戻して1回だけ書き直させる。"
+            "ツールは B と同じ（Phase 7 の10個）。"
+        ),
+        tool_specs=tuple(TOOL_SPECS_PHASE7),
     ),
     Condition(
         id="D",
@@ -158,6 +177,32 @@ OPTIONAL_CONDITIONS: tuple[Condition, ...] = (
             "「Ontology 同様に生のドキュメントを揃えれば精度は上がるのか」を測る。"
         ),
         tool_specs=tuple(DOCUMENT_TOOL_SPECS),
+        corpus_dir="corpus-aligned",
+    ),
+    Condition(
+        id="G",
+        label="オントロジー（ツール表面を直した版）",
+        use_tools=True,
+        system_prompt=SYSTEM_PROMPT,
+        revise=False,
+        note=(
+            "条件 B のツール表面の穴を埋めた版。源泉名で引く describe_spring_source を足し、"
+            "describe_spring_quality が仕上げ湯の逆向き（この泉質のあとに勧められる泉質）も返すようにした。"
+            "Phase 7 で B が落とした Q1・Q2・Q7 が、表現形式ではなくツールの切り方の問題だったかを測る。"
+        ),
+        tool_specs=tuple(TOOL_SPECS),
+    ),
+    Condition(
+        id="H",
+        label="揃えた生ドキュメント＋計算ツール",
+        use_tools=True,
+        system_prompt=DOCUMENT_SEARCH_SYSTEM_PROMPT + CALCULATION_TOOL_NOTE,
+        revise=False,
+        note=(
+            "条件 F に、グラフ側の計算ツール（巡浴プランの生成・検証、含有成分別の限界飲用量）を足す。"
+            "整理された文書で足りない残りが計算だけなのかを測る。実務での最終形の候補。"
+        ),
+        tool_specs=tuple(DOCUMENT_TOOL_SPECS) + tuple(CALCULATION_TOOL_SPECS),
         corpus_dir="corpus-aligned",
     ),
 )

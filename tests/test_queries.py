@@ -249,3 +249,36 @@ def test_plan_unknown_area(graph: Graph) -> None:
 def test_describe_itinerary_reports_unknown_facility(graph: Graph) -> None:
     result = itinerary.describe_itinerary(graph, ["御座之湯", "架空の湯"])
     assert result["見つからなかった施設"] == ["架空の湯"]
+
+def test_源泉名から源泉を引ける(graph: Graph) -> None:
+    """Phase 8 で足した穴埋め。**値はグラフにあるのに引けない**状態を解消する。
+
+    Phase 7 の実測では「草津の湯畑源泉の pH は」に対して施設名で引くツールしか無く、
+    Haiku は `describe_facility("湯畑")` が空振りしたところで諦めていた（該当2問で 4/15）。
+    """
+    result = queries.describe_spring_source(graph, "湯畑")
+    assert result is not None
+    assert result["源泉名"] == "湯畑源泉"
+    assert result["pH"] == 2.08
+    assert "酸性泉" in result["掲示用泉質"]
+    assert result["この源泉を使う施設"] == ["御座之湯"]
+    assert any(url.startswith("http") for url in result["出典"])
+    # 未公表の理由も返す（「無い」と言える根拠になる）
+    assert "源泉温度は未確認" in result["データ状態"]
+    assert queries.describe_spring_source(graph, "秋保") is None
+
+
+def test_仕上げ湯は逆向きにも引ける(graph: Graph) -> None:
+    """「酸性泉のあとに何がよいか」は recommendedAfter の逆向きである。
+
+    Phase 7 では順方向しか返しておらず、酸性泉の戻り値では仕上げ湯の欄が空だった。
+    辺があっても引く向きを用意しなければ答えは出ない、という実測の教訓を固定する。
+    """
+    acidic = queries.describe_spring_quality(graph, "酸性泉")
+    assert acidic["仕上げ湯として推奨される先行泉質"] == []
+    after = acidic["この泉質のあとの仕上げ湯として推奨される泉質（経験則）"]
+    assert "単純温泉" in after
+    assert "炭酸水素塩泉" in after
+    # 単純温泉から見れば順方向に酸性泉・硫黄泉が並ぶ（向きが逆であること自体の確認）
+    simple = queries.describe_spring_quality(graph, "単純温泉")
+    assert "酸性泉" in simple["仕上げ湯として推奨される先行泉質"]

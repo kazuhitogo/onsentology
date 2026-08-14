@@ -64,8 +64,12 @@ def test_four_conditions_are_defined() -> None:
     assert by_id["D"].use_tools is True
     # 差し戻すのは C だけ
     assert [c.id for c in ablation.CONDITIONS if c.revise] == ["C"]
-    # B・C はオントロジーのツール（既定）、D は文書検索に差し替える
-    assert by_id["B"].tool_specs is None
+    # B・C は Phase 7 を測ったときの10ツールに固定してある（当時の条件を再現するため）。
+    # Phase 8 で describe_spring_source を足したので、既定のままでは条件が変わってしまう。
+    names = [spec["toolSpec"]["name"] for spec in by_id["B"].tool_specs]
+    assert len(names) == 10
+    assert "describe_spring_source" not in names
+    assert by_id["B"].tool_specs == by_id["C"].tool_specs
     assert [spec["toolSpec"]["name"] for spec in by_id["D"].tool_specs] == [
         "search_documents",
         "fetch_document",
@@ -80,13 +84,46 @@ def test_optional_conditions_are_available_but_not_default() -> None:
     （既定で走らせると A〜D の288サンプルと同時に測ったように見えてしまう）。
     """
     optional = {c.id for c in ablation.OPTIONAL_CONDITIONS}
-    assert optional == {"A+", "E", "F"}
+    assert optional == {"A+", "E", "F", "G", "H"}
     assert optional.isdisjoint({c.id for c in ablation.CONDITIONS})
     assert {c.id for c in ablation.ALL_CONDITIONS} == optional | set(ablation.CONDITION_IDS)
     condition_e = next(c for c in ablation.OPTIONAL_CONDITIONS if c.id == "E")
     names = [spec["toolSpec"]["name"] for spec in condition_e.tool_specs]
     assert "describe_facility" in names
     assert "search_documents" in names
+
+
+def test_phase8_conditions_isolate_one_change_each() -> None:
+    """Phase 8 で足した条件は、1条件につき1つだけ変える。
+
+    G は B に対して**ツールだけ**を変える（源泉名で引く経路と仕上げ湯の逆向きを足す）。
+    H は F に対して**計算ツールだけ**を足す。混ぜると何が効いたのか言えなくなる。
+    """
+    b = next(c for c in ablation.CONDITIONS if c.id == "B")
+    d = next(c for c in ablation.CONDITIONS if c.id == "D")
+    g = next(c for c in ablation.OPTIONAL_CONDITIONS if c.id == "G")
+    f = next(c for c in ablation.OPTIONAL_CONDITIONS if c.id == "F")
+    h = next(c for c in ablation.OPTIONAL_CONDITIONS if c.id == "H")
+
+    # G は B と同じプロンプト・同じコーパス（＝グラフ）で、ツールだけが増える
+    assert g.system_prompt == b.system_prompt
+    assert g.corpus_dir is b.corpus_dir is None
+    g_names = {spec["toolSpec"]["name"] for spec in g.tool_specs}
+    b_names = {spec["toolSpec"]["name"] for spec in b.tool_specs}
+    assert g_names - b_names == {"describe_spring_source"}
+
+    # H は F と同じコーパスで、計算ツールだけが増える
+    assert h.corpus_dir == f.corpus_dir == "corpus-aligned"
+    h_names = {spec["toolSpec"]["name"] for spec in h.tool_specs}
+    f_names = {spec["toolSpec"]["name"] for spec in f.tool_specs}
+    assert h_names - f_names == {
+        "plan_itinerary",
+        "validate_itinerary",
+        "evaluate_drinking_contraindications",
+    }
+    # プロンプトは D・F と同じ規則のまま、計算ツールの案内だけを足す
+    assert h.system_prompt.startswith(d.system_prompt)
+    assert "計算の道具" in h.system_prompt
 
 
 def test_aligned_document_condition_differs_only_in_the_corpus() -> None:

@@ -188,6 +188,14 @@ TOOL_SPECS: list[dict[str, Any]] = [
         ["name"],
     ),
     _tool(
+        "describe_spring_source",
+        "源泉1件の詳細を**源泉名から**返す。pH・源泉温度・溶存物質総量・掲示泉質名・掲示用泉質・"
+        "液性/泉温/浸透圧区分・データ状態（未公表ならその理由）・この源泉を使う施設・出典URLを含む。"
+        "「湯畑源泉の pH」のように施設ではなく源泉を聞かれたときはこれを使う。",
+        {"name": {"type": "string", "description": "源泉名の一部。例: 湯畑、万代、煮川"}},
+        ["name"],
+    ),
+    _tool(
         "describe_spring_quality",
         "掲示用泉質10種のうち1件の詳細を返す。判定基準の成分と閾値、法的根拠、浴用/飲用適応症、"
         "泉質別禁忌症、皮膚刺激の強さ、仕上げ湯としての推奨関係を含む。",
@@ -272,6 +280,22 @@ TOOL_SPECS: list[dict[str, Any]] = [
     ),
 ]
 
+
+#: Phase 7（288サンプル）を測ったときのオントロジーのツール構成。**再現のために凍結する。**
+#: Phase 8 で ``describe_spring_source`` を足したので、そのままでは当時の条件 B を再現できない。
+#: 「ツール表面を直したら成績はどう変わるか」を測るには、直す前の構成も残っている必要がある。
+TOOL_SPECS_PHASE7: list[dict[str, Any]] = [
+    spec for spec in TOOL_SPECS if spec["toolSpec"]["name"] != "describe_spring_source"
+]
+
+#: グラフ側の計算ツール。条件 H（揃えた生ドキュメント＋計算）で文書検索に足す。
+#: 「整理された文書で足りない残りは計算だけか」を測るためのもの。
+CALCULATION_TOOL_SPECS: list[dict[str, Any]] = [
+    spec
+    for spec in TOOL_SPECS
+    if spec["toolSpec"]["name"]
+    in {"plan_itinerary", "validate_itinerary", "evaluate_drinking_contraindications"}
+]
 
 #: 生テキスト検索のツール（効果検証の条件 D）。オントロジーのツール10個の対抗馬である。
 #: 与えるのは2つだけ。「検索して読む」以上のことは生テキストでは提供できないという主張が
@@ -363,6 +387,10 @@ class OnsenOntologyTools:
     def _tool_describe_facility(self, name: str) -> Any:
         result = queries.describe_facility(self.graph, name)
         return result if result is not None else {"error": f"施設が見つからない: {name}"}
+
+    def _tool_describe_spring_source(self, name: str) -> Any:
+        result = queries.describe_spring_source(self.graph, name)
+        return result if result is not None else {"error": f"源泉が見つからない: {name}"}
 
     def _tool_describe_spring_quality(self, name: str) -> Any:
         result = queries.describe_spring_quality(self.graph, name)
@@ -561,7 +589,9 @@ __all__ = [
     "GUARDRAIL_ONLY_SYSTEM_PROMPT",
     "PERSONA_ONLY_SYSTEM_PROMPT",
     "SYSTEM_PROMPT",
+    "CALCULATION_TOOL_SPECS",
     "TOOL_SPECS",
+    "TOOL_SPECS_PHASE7",
     "AgentResult",
     "Finding",
     "OnsenGeezerAgent",

@@ -12,7 +12,7 @@ from decimal import Decimal
 from typing import Any
 
 from rdflib import Graph, Literal, URIRef
-from rdflib.namespace import RDF, RDFS
+from rdflib.namespace import DCTERMS, RDF, RDFS
 
 from .namespaces import ONSEN
 from .reasoning import PREFIXES
@@ -430,6 +430,16 @@ def describe_spring_quality(graph: Graph, name: str) -> dict[str, Any] | None:
     def labels(prop: URIRef) -> list[str]:
         return sorted(filter(None, (_label(graph, obj) for obj in graph.objects(quality, prop))))
 
+    def inverse_labels(prop: URIRef) -> list[str]:
+        """``?x prop quality`` の向きで引く。
+
+        ``onsen:recommendedAfter`` は「X は Y のあとの仕上げ湯」という向きなので、
+        「酸性泉のあとに何がよいか」を聞かれたときは**逆向き**をたどる必要がある。
+        Phase 7 の実測では、辺があるのにこの経路が無く、酸性泉の戻り値では
+        仕上げ湯の欄が空で返っていた（グラフに書いてあっても引けなければ答えは出ない）。
+        """
+        return sorted(filter(None, (_label(graph, subj) for subj in graph.subjects(prop, quality))))
+
     return {
         "uri": str(quality),
         "泉質名": str(row.name),
@@ -445,14 +455,91 @@ def describe_spring_quality(graph: Graph, name: str) -> dict[str, Any] | None:
         "飲用適応症": labels(ONSEN.hasDrinkingIndication),
         "泉質別浴用禁忌症": labels(ONSEN.hasBathingContraindication),
         "仕上げ湯として推奨される先行泉質": labels(ONSEN.recommendedAfter),
+        "この泉質のあとの仕上げ湯として推奨される泉質（経験則）": inverse_labels(
+            ONSEN.recommendedAfter
+        ),
         "連続利用が非推奨の泉質": labels(ONSEN.incompatibleWith),
+    }
+
+
+Q_SPRING_SOURCE_DETAIL = (
+    PREFIXES
+    + """
+SELECT DISTINCT ?source ?name ?displayed ?legacy ?pH ?temp ?dissolved
+       ?liquidity ?tempClass ?osmotic ?status
+WHERE {
+    ?source a/rdfs:subClassOf* onsen:SpringSource ;
+            rdfs:label ?name .
+    FILTER ( CONTAINS(?name, ?needle) )
+    OPTIONAL { ?source onsen:displayedQualityName ?displayed }
+    OPTIONAL { ?source onsen:legacyQualityName ?legacy }
+    OPTIONAL { ?source onsen:pH ?pH }
+    OPTIONAL { ?source onsen:sourceTemperature ?temp }
+    OPTIONAL { ?source onsen:dissolvedSubstanceTotal ?dissolved }
+    OPTIONAL { ?source onsen:liquidityClass ?lc . ?lc rdfs:label ?liquidity }
+    OPTIONAL { ?source onsen:temperatureClass ?tc . ?tc rdfs:label ?tempClass }
+    OPTIONAL { ?source onsen:osmoticClass ?oc . ?oc rdfs:label ?osmotic }
+    OPTIONAL { ?source onsen:dataStatus ?status }
+}
+ORDER BY ?name
+"""
+)
+
+Q_SOURCE_FACILITIES = (
+    PREFIXES
+    + """
+SELECT DISTINCT ?name WHERE { ?facility onsen:hasSpringSource ?source ; rdfs:label ?name }
+ORDER BY ?name
+"""
+)
+
+
+def describe_spring_source(graph: Graph, name: str) -> dict[str, Any] | None:
+    """源泉1件の詳細を**源泉名から**引く。
+
+    Phase 7 の実測で露出した穴を埋めるために足した。「草津の湯畑源泉の pH は」という
+    問いに対して、施設名で引く :func:`describe_facility` しか無かったので
+    ``describe_facility("湯畑")`` が空振りしていた。**値はグラフにあるのに引けない**という
+    状態で、弱いモデルはそこで諦めていた（Haiku の条件B は該当2問で 4/15）。
+
+    出典・データ状態・利用施設まで返す。pH や温度が未公表の源泉は、その理由が
+    ``onsen:dataStatus`` に書いてあるのでそれも返す（「無い」と言える根拠になる）。
+    """
+    rows = list(graph.query(Q_SPRING_SOURCE_DETAIL, initBindings={"needle": Literal(name)}))
+    if not rows:
+        return None
+    row = min(rows, key=lambda r: len(str(r.name)))
+    source = row.source
+    qualities = sorted(
+        {
+            str(q_name)
+            for _, q_name in graph.query(Q_SOURCE_QUALITIES, initBindings={"source": source})
+        }
+    )
+    facilities = [
+        str(r[0]) for r in graph.query(Q_SOURCE_FACILITIES, initBindings={"source": source})
+    ]
+    return {
+        "uri": str(source),
+        "源泉名": str(row.name),
+        "掲示泉質名": _lit(row.displayed),
+        "旧泉質名": _lit(row.legacy),
+        "掲示用泉質": qualities,
+        "pH": _lit(row.pH),
+        "源泉温度": _lit(row.temp),
+        "溶存物質総量": _lit(row.dissolved),
+        "液性区分": _lit(row.liquidity),
+        "泉温区分": _lit(row.tempClass),
+        "浸透圧区分": _lit(row.osmotic),
+        "データ状態": _lit(row.status),
+        "この源泉を使う施設": facilities,
+        "出典": sorted(str(s) for s in graph.objects(source, DCTERMS.source)),
     }
 
 
 # --------------------------------------------------------------------------
 # 一般的適応症・禁忌症・プロトコル
 # --------------------------------------------------------------------------
-
 
 def general_indications(graph: Graph) -> dict[str, Any]:
     """療養泉の一般的適応症と温泉の一般的禁忌症（浴用）。"""
